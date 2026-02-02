@@ -1,4 +1,4 @@
-# CV Generator 📄
+# MakeMeEt 📄
 
 > Generador de currículums profesionales de alto impacto.
 
