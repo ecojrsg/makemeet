@@ -247,7 +247,7 @@ export function CVForm({ data, onChange }: CVFormProps) {
                 id="location"
                 value={data.personalInfo.location}
                 onChange={(e) => updatePersonalInfo('location', e.target.value)}
-                placeholder="Mexico, CDMX"
+                placeholder="México, CDMX"
               />
             </div>
             <div className="space-y-2">
