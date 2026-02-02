@@ -60,7 +60,7 @@ export function CVForm({ data, onChange }: CVFormProps) {
   const updateExperience = (id: string, field: string, value: string | boolean) => {
     onChange({
       ...data,
-      experiences: data.experiences.map(exp => 
+      experiences: data.experiences.map(exp =>
         exp.id === id ? { ...exp, [field]: value } : exp
       )
     });
@@ -89,7 +89,7 @@ export function CVForm({ data, onChange }: CVFormProps) {
   const updateEducation = (id: string, field: string, value: string) => {
     onChange({
       ...data,
-      education: data.education.map(edu => 
+      education: data.education.map(edu =>
         edu.id === id ? { ...edu, [field]: value } : edu
       )
     });
@@ -110,7 +110,7 @@ export function CVForm({ data, onChange }: CVFormProps) {
   const updateSkill = (id: string, field: string, value: string) => {
     onChange({
       ...data,
-      skills: data.skills.map(skill => 
+      skills: data.skills.map(skill =>
         skill.id === id ? { ...skill, [field]: value } : skill
       )
     });
@@ -128,7 +128,7 @@ export function CVForm({ data, onChange }: CVFormProps) {
   const updateLanguage = (id: string, field: string, value: string) => {
     onChange({
       ...data,
-      languages: data.languages.map(lang => 
+      languages: data.languages.map(lang =>
         lang.id === id ? { ...lang, [field]: value } : lang
       )
     });
@@ -247,7 +247,7 @@ export function CVForm({ data, onChange }: CVFormProps) {
                 id="location"
                 value={data.personalInfo.location}
                 onChange={(e) => updatePersonalInfo('location', e.target.value)}
-                placeholder="Madrid, España"
+                placeholder="Mexico, CDMX"
               />
             </div>
             <div className="space-y-2">
