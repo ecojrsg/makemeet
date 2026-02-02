@@ -93,6 +93,7 @@ La aplicación estará disponible en:
 ------------------------------------------------------------------------
 
 ### 🐳 Despliegue con Docker (recomendado)
+Importante: Cada vez que se modifique el archivo de entorno (.env) o se requiera reiniciar el servicio con cambios, es necesario reconstruir la imagen de Docker para que los cambios se inyecten correctamente durante el proceso de build.
 
 ``` bash
 docker-compose up -d
