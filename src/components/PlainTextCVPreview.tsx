@@ -117,7 +117,7 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
           {githubProfile.bio && <div>Bio: {githubProfile.bio}</div>}
           <div>Repositorios públicos: {githubProfile.public_repos}</div>
           <div>Seguidores: {githubProfile.followers}</div>
-          
+
           {githubRepos.length > 0 && (
             <div className="mt-3">
               <div className="font-semibold">Repositorios destacados:</div>
@@ -135,7 +135,7 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
       <div className="text-center text-muted-foreground mt-8">
         ---
         <div>CV optimizado para lectura por IA</div>
-        <div>Generado con CV Generator Pro</div>
+        <div>Generado con MakeMeEt</div>
       </div>
     </div>
   );

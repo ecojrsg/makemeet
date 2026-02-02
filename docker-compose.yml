@@ -1,4 +1,4 @@
-# Docker Compose para CV Generator
+# Docker Compose para MakeMeEt
 # La app se conecta a un Supabase externo (SaaS o autohospedado)
 
 version: "3.8"

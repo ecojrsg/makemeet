@@ -42,7 +42,7 @@ export function SetupWizard() {
           </div>
           <h1 className="text-3xl font-bold tracking-tight">Configuración Inicial</h1>
           <p className="text-muted-foreground">
-            CV Generator necesita configurar la base de datos antes de continuar
+            MakeMeEt necesita configurar la base de datos antes de continuar
           </p>
         </div>
 
@@ -73,8 +73,8 @@ export function SetupWizard() {
               </Alert>
             </CardContent>
             <CardFooter>
-              <Button 
-                onClick={manejarReintentar} 
+              <Button
+                onClick={manejarReintentar}
                 disabled={reintentando}
                 className="w-full"
               >
@@ -101,14 +101,14 @@ export function SetupWizard() {
                   <TabsTrigger value="instrucciones">Instrucciones</TabsTrigger>
                   <TabsTrigger value="sql">SQL</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="instrucciones" className="space-y-4 mt-4">
                   <ol className="list-decimal list-inside space-y-3 text-sm">
                     <li>
                       Abre tu{' '}
-                      <a 
-                        href="https://supabase.com/dashboard" 
-                        target="_blank" 
+                      <a
+                        href="https://supabase.com/dashboard"
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline inline-flex items-center gap-1"
                       >
@@ -122,7 +122,7 @@ export function SetupWizard() {
                     <li>Haz clic en "Reintentar verificación" abajo</li>
                   </ol>
                 </TabsContent>
-                
+
                 <TabsContent value="sql" className="mt-4">
                   <div className="relative">
                     <pre className="text-xs bg-muted p-4 rounded-lg overflow-auto max-h-64">
@@ -151,8 +151,8 @@ export function SetupWizard() {
               </Tabs>
             </CardContent>
             <CardFooter className="flex gap-2">
-              <Button 
-                onClick={manejarReintentar} 
+              <Button
+                onClick={manejarReintentar}
                 disabled={reintentando}
                 className="flex-1"
               >
