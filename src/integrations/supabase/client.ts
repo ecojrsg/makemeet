@@ -3,8 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 // Usar variables de entorno con fallback de supabase
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// @ts-ignore
+const SUPABASE_URL = window.env?.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL;
+// @ts-ignore
+const SUPABASE_PUBLISHABLE_KEY = window.env?.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

@@ -1,18 +1,15 @@
 # Docker Compose para MakeMeEt
 # La app se conecta a un Supabase externo (SaaS o autohospedado)
 
-version: "3.8"
+# version: "3.8"
 
 services:
   cv-generator-app:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-        - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
-        - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
-        - VITE_AUTH_PROVIDERS=${VITE_AUTH_PROVIDERS:-email}
+    env_file:
+      - .env
     container_name: cv-generator-app
     ports:
       - "${APP_PORT:-8080}:80"

@@ -146,46 +146,46 @@ export async function verificarConexion(): Promise<boolean> {
  */
 export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boolean }> {
   const resultado = { profiles: false, cvs: false };
-  
+
   try {
     // Verificar tabla profiles
     const { error: errorProfiles } = await supabase
       .from('profiles')
       .select('id')
       .limit(1);
-    
+
     // Solo existe si NO hay error
     if (!errorProfiles) {
       resultado.profiles = true;
     } else {
       // Si el error indica que no existe, la tabla no existe
       const noExiste = errorProfiles.message?.toLowerCase().includes('does not exist') ||
-                       errorProfiles.code === '42P01'; // código PostgreSQL para tabla inexistente
+        errorProfiles.code === '42P01'; // código PostgreSQL para tabla inexistente
       resultado.profiles = !noExiste ? false : false;
     }
   } catch {
     resultado.profiles = false;
   }
-  
+
   try {
     // Verificar tabla cvs
     const { error: errorCvs } = await supabase
       .from('cvs')
       .select('id')
       .limit(1);
-    
+
     // Solo existe si NO hay error
     if (!errorCvs) {
       resultado.cvs = true;
     } else {
       const noExiste = errorCvs.message?.toLowerCase().includes('does not exist') ||
-                       errorCvs.code === '42P01';
+        errorCvs.code === '42P01';
       resultado.cvs = !noExiste ? false : false;
     }
   } catch {
     resultado.cvs = false;
   }
-  
+
   return resultado;
 }
 
@@ -194,7 +194,8 @@ export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boole
  * Lee desde variable de entorno ya que Supabase no expone esta info públicamente
  */
 export function obtenerProveedoresConfigurados(): string[] {
-  const proveedoresEnv = import.meta.env.VITE_AUTH_PROVIDERS || 'email';
+  // @ts-ignore
+  const proveedoresEnv = window.env?.VITE_AUTH_PROVIDERS || import.meta.env.VITE_AUTH_PROVIDERS || 'email';
   return proveedoresEnv
     .split(',')
     .map((p: string) => p.trim().toLowerCase())
@@ -211,21 +212,21 @@ export async function verificarSistema(): Promise<ResultadoVerificacion> {
     proveedoresAuth: [],
     errorMensaje: null,
   };
-  
+
   // Paso 1: Verificar conexión
   resultado.conexionOk = await verificarConexion();
-  
+
   if (!resultado.conexionOk) {
     resultado.errorMensaje = 'No se pudo conectar a Supabase. Verifica las credenciales en .env';
     return resultado;
   }
-  
+
   // Paso 2: Verificar tablas
   resultado.tablas = await verificarTablas();
-  
+
   // Paso 3: Obtener proveedores de auth
   resultado.proveedoresAuth = obtenerProveedoresConfigurados();
-  
+
   // Determinar si hay tablas faltantes
   if (!resultado.tablas.profiles || !resultado.tablas.cvs) {
     const faltantes = [];
@@ -233,7 +234,7 @@ export async function verificarSistema(): Promise<ResultadoVerificacion> {
     if (!resultado.tablas.cvs) faltantes.push('cvs');
     resultado.errorMensaje = `Tablas faltantes: ${faltantes.join(', ')}. Ejecuta el SQL de configuración.`;
   }
-  
+
   return resultado;
 }
 

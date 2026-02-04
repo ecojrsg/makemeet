@@ -15,7 +15,9 @@ interface AuthDialogProps {
 }
 
 // Obtener proveedores habilitados desde variable de entorno
-const proveedoresAuth = (import.meta.env.VITE_AUTH_PROVIDERS || 'email').split(',').map((p: string) => p.trim().toLowerCase());
+// @ts-ignore
+const envContent = window.env?.VITE_AUTH_PROVIDERS || import.meta.env.VITE_AUTH_PROVIDERS || 'email';
+const proveedoresAuth = envContent.split(',').map((p: string) => p.trim().toLowerCase());
 const googleHabilitado = proveedoresAuth.includes('google');
 
 export function AuthDialog({ abierto, onCerrar }: AuthDialogProps) {
@@ -38,7 +40,7 @@ export function AuthDialog({ abierto, onCerrar }: AuthDialogProps) {
     setCargando(true);
 
     const { error } = await iniciarSesion(loginEmail, loginPassword);
-    
+
     if (error) {
       toast.error('Error al iniciar sesión: ' + error.message);
     } else {
@@ -46,7 +48,7 @@ export function AuthDialog({ abierto, onCerrar }: AuthDialogProps) {
       onCerrar();
       limpiarFormularios();
     }
-    
+
     setCargando(false);
   };
 
@@ -55,7 +57,7 @@ export function AuthDialog({ abierto, onCerrar }: AuthDialogProps) {
     setCargando(true);
 
     const { error } = await registrarse(regEmail, regPassword, regNombre);
-    
+
     if (error) {
       toast.error('Error al registrarse: ' + error.message);
     } else {
@@ -63,14 +65,14 @@ export function AuthDialog({ abierto, onCerrar }: AuthDialogProps) {
       onCerrar();
       limpiarFormularios();
     }
-    
+
     setCargando(false);
   };
 
   const manejarGoogle = async () => {
     setCargandoGoogle(true);
     const { error } = await iniciarConGoogle();
-    
+
     if (error) {
       toast.error('Error con Google: ' + error.message);
       setCargandoGoogle(false);
@@ -133,9 +135,9 @@ export function AuthDialog({ abierto, onCerrar }: AuthDialogProps) {
                 )}
                 Iniciar sesión
               </Button>
-              <Button 
+              <Button
                 type="button"
-                variant="link" 
+                variant="link"
                 className="w-full text-sm"
                 onClick={() => {
                   onCerrar();
@@ -225,7 +227,7 @@ export function AuthDialog({ abierto, onCerrar }: AuthDialogProps) {
         )}
       </DialogContent>
 
-      <ForgotPasswordDialog 
+      <ForgotPasswordDialog
         abierto={mostrarRecuperacion}
         onCerrar={() => setMostrarRecuperacion(false)}
         onVolverLogin={() => {
