@@ -25,3 +25,15 @@ dist-ssr
 
 # Variables de entorno
 .env
+
+# Agentes
+.CLAUDE.md
+.AGENT.md
+.GEMINI.md
+.ANTIGRAVITY.md
+.cursor
+.agent
+.agents
+.claude
+.gemini
+.antigravity
