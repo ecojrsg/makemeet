@@ -27,10 +27,10 @@ dist-ssr
 .env
 
 # Agentes
-.CLAUDE.md
-.AGENT.md
-.GEMINI.md
-.ANTIGRAVITY.md
+CLAUDE.md
+AGENT.md
+GEMINI.md
+ANTIGRAVITY.md
 .cursor
 .agent
 .agents

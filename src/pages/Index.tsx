@@ -67,33 +67,85 @@ const Index = () => {
       return;
     }
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const opt = {
-        margin: format === 'styled' ? 0 : 10,
-        filename: `cv-${format === 'styled' ? 'profesional' : 'texto-plano'}.pdf`,
-        image: {
-          type: 'jpeg' as const,
-          quality: 1
-        },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          allowTaint: true,
-          letterRendering: true
-        },
-        jsPDF: {
-          unit: 'mm' as const,
-          format: 'a4' as const,
-          orientation: 'portrait' as const
-        },
-        pagebreak: {
-          mode: 'avoid-all'
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas-pro'),
+        import('jspdf')
+      ]);
+
+      // Clonar elemento fuera del contexto sticky para evitar
+      // desalineación vertical en html2canvas
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.removeAttribute('id');
+
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = `${element.scrollWidth}px`;
+      container.style.zIndex = '-1000';
+      container.style.overflow = 'visible';
+      container.appendChild(clone);
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        allowTaint: true,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: element.scrollWidth,
+      });
+
+      document.body.removeChild(container);
+
+      const imgData = canvas.toDataURL('image/jpeg', 1);
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      let heightLeft: number;
+      let position: number;
+
+      if (format === 'plain') {
+        const margin = 10;
+        const contentWidth = pageWidth - margin * 2;
+        const contentImgHeight = (canvas.height * contentWidth) / canvas.width;
+        heightLeft = contentImgHeight;
+        position = margin;
+
+        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
+        heightLeft -= (pageHeight - margin);
+
+        while (heightLeft > 0) {
+          pdf.addPage();
+          position = margin - (contentImgHeight - heightLeft);
+          pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
+          heightLeft -= pageHeight;
         }
-      };
-      await html2pdf().set(opt).from(element).save();
+      } else {
+        const imgHeight = (canvas.height * pageWidth) / canvas.width;
+        heightLeft = imgHeight;
+        position = 0;
+
+        pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft > 0) {
+          position -= pageHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+      }
+
+      pdf.save(`cv-${format === 'styled' ? 'profesional' : 'texto-plano'}.pdf`);
       toast.success('CV exportado correctamente');
     } catch (error) {
+      const leftover = document.querySelector('div[style*="left: -9999px"]');
+      if (leftover?.parentNode === document.body) {
+        document.body.removeChild(leftover);
+      }
       toast.error('Error al exportar. Intenta de nuevo.');
     }
   };
