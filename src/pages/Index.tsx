@@ -14,8 +14,9 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Sparkles, Code, Save } from 'lucide-react';
+import { Download, Sparkles, Code, Save, ChevronDown, FileText, Image } from 'lucide-react';
 import { toast } from 'sonner';
 
 const initialCVData: CVData = {
@@ -68,57 +69,40 @@ const Index = () => {
     eliminarCV
   } = useCVs();
 
-  const handleExport = async (format: 'styled' | 'plain') => {
-    const elementId = format === 'styled' ? 'styled-cv' : 'plain-cv';
-    let element = document.getElementById(elementId);
-    if (!element) {
-      toast.error('Error al exportar el CV');
-      return;
-    }
-    
+  const captureStyledCV = async (): Promise<{ canvas: HTMLCanvasElement; html2canvas: any }> => {
+    const { default: html2canvas } = await import('html2canvas-pro');
+
     let tempContainer: HTMLDivElement | null = null;
     let tempRoot: any = null;
-    
+
     try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import('html2canvas-pro'),
-        import('jspdf')
-      ]);
+      tempContainer = document.createElement('div');
+      tempContainer.style.position = 'fixed';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '210mm';
+      tempContainer.style.zIndex = '-1000';
+      document.body.appendChild(tempContainer);
 
-      // Si es formato styled, crear una versión temporal con mode="export"
-      if (format === 'styled') {
-        tempContainer = document.createElement('div');
-        tempContainer.style.position = 'fixed';
-        tempContainer.style.left = '-9999px';
-        tempContainer.style.top = '0';
-        tempContainer.style.width = '210mm';
-        tempContainer.style.zIndex = '-1000';
-        document.body.appendChild(tempContainer);
-
-        // Renderizar la plantilla con mode="export"
-        let plantillaComponent;
-        if (plantillaActual === 'moderno') {
-          plantillaComponent = <PlantillaModerna datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
-        } else if (plantillaActual === 'clasico') {
-          plantillaComponent = <PlantillaClasica datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
-        } else if (plantillaActual === 'minimalista') {
-          plantillaComponent = <PlantillaMinimalista datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
-        } else {
-          plantillaComponent = <PlantillaCreativa datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
-        }
-
-        tempRoot = ReactDOM.createRoot(tempContainer);
-        await new Promise<void>((resolve) => {
-          tempRoot.render(plantillaComponent);
-          // Esperar a que el renderizado se complete
-          setTimeout(resolve, 100);
-        });
-
-        element = tempContainer.querySelector('[id="styled-cv"]') as HTMLElement || tempContainer.firstChild as HTMLElement;
+      let plantillaComponent;
+      if (plantillaActual === 'moderno') {
+        plantillaComponent = <PlantillaModerna datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
+      } else if (plantillaActual === 'clasico') {
+        plantillaComponent = <PlantillaClasica datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
+      } else if (plantillaActual === 'minimalista') {
+        plantillaComponent = <PlantillaMinimalista datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
+      } else {
+        plantillaComponent = <PlantillaCreativa datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
       }
 
-      // Clonar elemento fuera del contexto sticky para evitar
-      // desalineación vertical en html2canvas
+      tempRoot = ReactDOM.createRoot(tempContainer);
+      await new Promise<void>((resolve) => {
+        tempRoot.render(plantillaComponent);
+        setTimeout(resolve, 100);
+      });
+
+      const element = tempContainer.querySelector('[id="styled-cv"]') as HTMLElement || tempContainer.firstChild as HTMLElement;
+
       const clone = element.cloneNode(true) as HTMLElement;
       clone.removeAttribute('id');
 
@@ -126,7 +110,7 @@ const Index = () => {
       container.style.position = 'fixed';
       container.style.left = '-9999px';
       container.style.top = '0';
-      container.style.width = format === 'styled' ? '210mm' : `${element.scrollWidth}px`;
+      container.style.width = '210mm';
       container.style.zIndex = '-1000';
       container.style.overflow = 'visible';
       container.appendChild(clone);
@@ -139,62 +123,15 @@ const Index = () => {
         allowTaint: true,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: format === 'styled' ? 794 : element.scrollWidth, // 210mm = ~794px
+        windowWidth: 794,
       });
 
       document.body.removeChild(container);
-      if (tempContainer && tempRoot) {
-        tempRoot.unmount();
-        document.body.removeChild(tempContainer);
-      }
+      tempRoot.unmount();
+      document.body.removeChild(tempContainer);
 
-      const imgData = canvas.toDataURL('image/jpeg', 1);
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      let heightLeft: number;
-      let position: number;
-
-      if (format === 'plain') {
-        const margin = 10;
-        const contentWidth = pageWidth - margin * 2;
-        const contentImgHeight = (canvas.height * contentWidth) / canvas.width;
-        heightLeft = contentImgHeight;
-        position = margin;
-
-        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
-        heightLeft -= (pageHeight - margin);
-
-        while (heightLeft > 0) {
-          pdf.addPage();
-          position = margin - (contentImgHeight - heightLeft);
-          pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
-          heightLeft -= pageHeight;
-        }
-      } else {
-        const imgHeight = (canvas.height * pageWidth) / canvas.width;
-        heightLeft = imgHeight;
-        position = 0;
-
-        pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        while (heightLeft > 0) {
-          position -= pageHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
-          heightLeft -= pageHeight;
-        }
-      }
-
-      pdf.save(`cv-${format === 'styled' ? 'profesional' : 'texto-plano'}.pdf`);
-      toast.success('CV exportado correctamente');
+      return { canvas, html2canvas };
     } catch (error) {
-      const leftover = document.querySelector('div[style*="left: -9999px"]');
-      if (leftover?.parentNode === document.body) {
-        document.body.removeChild(leftover);
-      }
       if (tempContainer && tempRoot) {
         try {
           tempRoot.unmount();
@@ -203,6 +140,120 @@ const Index = () => {
           }
         } catch {}
       }
+      const leftover = document.querySelector('div[style*="left: -9999px"]');
+      if (leftover?.parentNode === document.body) {
+        document.body.removeChild(leftover);
+      }
+      throw error;
+    }
+  };
+
+  const handleExportPDFCarta = async () => {
+    try {
+      if (activePreview === 'plain') {
+        const element = document.getElementById('plain-cv');
+        if (!element) { toast.error('Error al exportar el CV'); return; }
+
+        const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+          import('html2canvas-pro'),
+          import('jspdf')
+        ]);
+
+        const clone = element.cloneNode(true) as HTMLElement;
+        clone.removeAttribute('id');
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.width = `${element.scrollWidth}px`;
+        container.style.zIndex = '-1000';
+        container.style.overflow = 'visible';
+        container.appendChild(clone);
+        document.body.appendChild(container);
+
+        const canvas = await html2canvas(clone, {
+          scale: 2, useCORS: true, logging: false, allowTaint: true,
+          scrollX: 0, scrollY: 0, windowWidth: element.scrollWidth,
+        });
+        document.body.removeChild(container);
+
+        const imgData = canvas.toDataURL('image/jpeg', 1);
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 10;
+        const contentWidth = pageWidth - margin * 2;
+        const contentImgHeight = (canvas.height * contentWidth) / canvas.width;
+        let heightLeft = contentImgHeight;
+        let position = margin;
+
+        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
+        heightLeft -= (pageHeight - margin);
+        while (heightLeft > 0) {
+          pdf.addPage();
+          position = margin - (contentImgHeight - heightLeft);
+          pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
+          heightLeft -= pageHeight;
+        }
+        pdf.save('cv-texto-plano.pdf');
+      } else {
+        const { canvas } = await captureStyledCV();
+        const { default: jsPDF } = await import('jspdf');
+
+        const imgData = canvas.toDataURL('image/jpeg', 1);
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const imgHeight = (canvas.height * pageWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
+        heightLeft -= pageHeight;
+        while (heightLeft > 0) {
+          position -= pageHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+        pdf.save('cv-profesional.pdf');
+      }
+      toast.success('CV exportado correctamente');
+    } catch (error) {
+      toast.error('Error al exportar. Intenta de nuevo.');
+    }
+  };
+
+  const handleExportPDFContinuo = async () => {
+    try {
+      const { canvas } = await captureStyledCV();
+      const { default: jsPDF } = await import('jspdf');
+
+      const pageWidth = 210;
+      const imgHeight = (canvas.height * pageWidth) / canvas.width;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pageWidth, imgHeight] });
+
+      const imgData = canvas.toDataURL('image/jpeg', 1);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, imgHeight);
+      pdf.save('cv-profesional-continuo.pdf');
+      toast.success('CV exportado correctamente');
+    } catch (error) {
+      toast.error('Error al exportar. Intenta de nuevo.');
+    }
+  };
+
+  const handleExportImagen = async () => {
+    try {
+      const { canvas } = await captureStyledCV();
+      const dataURL = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataURL;
+      link.download = 'cv-profesional.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success('Imagen exportada correctamente');
+    } catch (error) {
       toast.error('Error al exportar. Intenta de nuevo.');
     }
   };
@@ -332,15 +383,45 @@ const Index = () => {
                           Copiar
                         </Button>
                       )}
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleExport(activePreview)}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Exportar
-                      </Button>
+                      {activePreview === 'plain' ? (
+                        <Button variant="default" size="sm" onClick={handleExportPDFCarta} className="gap-2">
+                          <Download className="h-4 w-4" />
+                          Exportar PDF
+                        </Button>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="default" size="sm" className="gap-2">
+                              <Download className="h-4 w-4" />
+                              Exportar
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={handleExportPDFCarta}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              <div>
+                                <div className="font-medium">PDF Carta</div>
+                                <div className="text-xs text-muted-foreground">Formato estándar con cortes de página</div>
+                              </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportPDFContinuo}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              <div>
+                                <div className="font-medium">PDF Continuo</div>
+                                <div className="text-xs text-muted-foreground">Una sola página, sin cortes</div>
+                              </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportImagen}>
+                              <Image className="h-4 w-4 mr-2" />
+                              <div>
+                                <div className="font-medium">Imagen PNG</div>
+                                <div className="text-xs text-muted-foreground">Imagen completa de alta resolución</div>
+                              </div>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
 
@@ -443,15 +524,45 @@ const Index = () => {
                           Copiar
                         </Button>
                       )}
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => handleExport(activePreview)}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Exportar PDF
-                      </Button>
+                      {activePreview === 'plain' ? (
+                        <Button variant="default" size="sm" onClick={handleExportPDFCarta} className="gap-2">
+                          <Download className="h-4 w-4" />
+                          Exportar PDF
+                        </Button>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="default" size="sm" className="gap-2">
+                              <Download className="h-4 w-4" />
+                              Exportar
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={handleExportPDFCarta}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              <div>
+                                <div className="font-medium">PDF Carta</div>
+                                <div className="text-xs text-muted-foreground">Formato estándar con cortes de página</div>
+                              </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportPDFContinuo}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              <div>
+                                <div className="font-medium">PDF Continuo</div>
+                                <div className="text-xs text-muted-foreground">Una sola página, sin cortes</div>
+                              </div>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={handleExportImagen}>
+                              <Image className="h-4 w-4 mr-2" />
+                              <div>
+                                <div className="font-medium">Imagen PNG</div>
+                                <div className="text-xs text-muted-foreground">Imagen completa de alta resolución</div>
+                              </div>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </div>
                   </div>
 

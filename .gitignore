@@ -27,6 +27,7 @@ dist-ssr
 .env
 
 # Agentes
+docs/*
 CLAUDE.md
 AGENT.md
 GEMINI.md
