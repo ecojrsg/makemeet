@@ -27,7 +27,7 @@ export function APIKeyManager() {
   const maskAPIKey = (key: string, visible: boolean) => {
     if (visible) return key;
     if (key.length <= 8) return '•'.repeat(key.length);
-    return key.substring(0, 8) + '•'.repeat(key.length - 8);
+    return key.substring(0, 8) + '•'.repeat(15);
   };
 
   const handleDelete = async (key: APIKey) => {
@@ -91,7 +91,9 @@ export function APIKeyManager() {
             </div>
           ) : (
             <div className="space-y-3">
-              {keys.map((key) => {
+              {keys
+                .filter(key => isAdmin || key.tipo === 'personal')
+                .map((key) => {
                 const isActive = activeKeyId === key.id;
                 const isVisible = visibleKeys.has(key.id);
                 const canDelete = key.tipo === 'personal' || isAdmin;
@@ -170,8 +172,8 @@ export function APIKeyManager() {
 
           {!isAdmin && (
             <div className="text-xs text-muted-foreground p-3 bg-muted rounded-lg">
-              <strong>Nota:</strong> Solo puedes eliminar tus API keys personales. Las keys globales
-              solo pueden ser eliminadas por administradores.
+              <strong>Nota:</strong> Solo puedes ver y gestionar tus API keys personales. 
+              Los administradores pueden configurar keys globales que estarán disponibles para todos los usuarios.
             </div>
           )}
         </CardContent>

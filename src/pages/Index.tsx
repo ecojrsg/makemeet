@@ -484,8 +484,8 @@ const Index = () => {
 
           {/* DESKTOP: Grid lado a lado */}
           <div className="hidden lg:grid lg:grid-cols-12 gap-6">
-            {/* Formulario - 4 columnas (33.33%) */}
-            <div className="lg:col-span-4 space-y-4">
+            {/* Formulario - 5 columnas (41.67%) */}
+            <div className="lg:col-span-5 space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -503,8 +503,8 @@ const Index = () => {
               <CVForm data={cvData} onChange={setCvData} />
             </div>
 
-            {/* Preview - 8 columnas (66.67%) */}
-            <div className="lg:col-span-8 space-y-4">
+            {/* Preview - 7 columnas (58.33%) */}
+            <div className="lg:col-span-7 space-y-4">
               <div className="sticky top-24 min-h-[calc(100vh-8rem)]">
                 <Tabs value={activePreview} onValueChange={(v) => setActivePreview(v as 'styled' | 'plain')}>
                   <div className="flex items-center justify-between mb-4">

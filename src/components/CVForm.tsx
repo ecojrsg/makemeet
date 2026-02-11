@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { MonthPicker } from '@/components/ui/month-picker';
 import { Plus, Trash2, User, Briefcase, GraduationCap, Code, Languages, Github, Camera, X, Sparkles, Loader2 } from 'lucide-react';
 import { mejorarTextoConIA } from '@/services/aiService';
 import { toast } from '@/hooks/use-toast';
@@ -389,10 +390,10 @@ export function CVForm({ data, onChange }: CVFormProps) {
                 </div>
                 <div className="space-y-2">
                   <Label>Fecha inicio</Label>
-                  <Input
-                    type="month"
+                  <MonthPicker
                     value={exp.startDate}
-                    onChange={(e) => updateExperience(exp.id, 'startDate', e.target.value)}
+                    onChange={(value) => updateExperience(exp.id, 'startDate', value)}
+                    placeholder="Mes de inicio"
                   />
                 </div>
                 <div className="space-y-2">
@@ -407,10 +408,10 @@ export function CVForm({ data, onChange }: CVFormProps) {
                       <Label htmlFor={`current-${exp.id}`} className="text-xs">Actual</Label>
                     </div>
                   </div>
-                  <Input
-                    type="month"
+                  <MonthPicker
                     value={exp.endDate}
-                    onChange={(e) => updateExperience(exp.id, 'endDate', e.target.value)}
+                    onChange={(value) => updateExperience(exp.id, 'endDate', value)}
+                    placeholder="Mes de finalización"
                     disabled={exp.current}
                   />
                 </div>
@@ -503,18 +504,18 @@ export function CVForm({ data, onChange }: CVFormProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Fecha inicio</Label>
-                  <Input
-                    type="month"
+                  <MonthPicker
                     value={edu.startDate}
-                    onChange={(e) => updateEducation(edu.id, 'startDate', e.target.value)}
+                    onChange={(value) => updateEducation(edu.id, 'startDate', value)}
+                    placeholder="Mes de inicio"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Fecha fin</Label>
-                  <Input
-                    type="month"
+                  <MonthPicker
                     value={edu.endDate}
-                    onChange={(e) => updateEducation(edu.id, 'endDate', e.target.value)}
+                    onChange={(value) => updateEducation(edu.id, 'endDate', value)}
+                    placeholder="Mes de finalización"
                   />
                 </div>
               </div>

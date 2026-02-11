@@ -42,7 +42,6 @@ export function SetupStatus() {
     conexionOk,
     tablasOk,
     tablasFaltantes,
-    configuracionOk,
     proveedoresAuth,
     errorMensaje
   } = useSetup();
@@ -79,15 +78,6 @@ export function SetupStatus() {
               ? 'Todas las tablas configuradas' 
               : `Faltantes: ${tablasFaltantes.join(', ')}`
           }
-        />
-
-        {/* Configuración de IA */}
-        <ElementoEstado
-          titulo="Inteligencia Artificial"
-          ok={configuracionOk}
-          verificando={verificando}
-          icono={<Sparkles className="h-5 w-5" />}
-          descripcion={configuracionOk ? 'Tabla de configuración disponible' : 'Opcional — se configurará después'}
         />
 
         {/* Proveedores de autenticación */}
