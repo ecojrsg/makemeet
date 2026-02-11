@@ -23,13 +23,13 @@ export function PlantillaCreativa({ datos, perfilGithub, reposGithub, mode = 'pr
   const esExportacion = mode === 'export';
 
   return (
-    <div 
+    <div
       id="styled-cv"
-      style={{ 
-        width: esExportacion ? '210mm' : '100%', 
+      style={{
+        width: esExportacion ? '210mm' : '100%',
         minHeight: esExportacion ? '297mm' : '100%',
         height: esExportacion ? 'auto' : '100%',
-        fontSize: '11pt', 
+        fontSize: '11pt',
         lineHeight: '1.5',
         backgroundColor: '#ffffff',
         color: '#1f2937',
@@ -38,7 +38,7 @@ export function PlantillaCreativa({ datos, perfilGithub, reposGithub, mode = 'pr
       }}
     >
       {/* Sidebar */}
-      <div style={{ width: '35%', backgroundColor: colorPrimario, color: '#ffffff', padding: '32px 24px' }}>
+      <div style={{ width: '35%', backgroundColor: colorPrimario, color: '#ffffff', padding: '32px 24px', minHeight: '324mm' }}>
         {/* Foto */}
         {personalInfo.photo && (
           <div style={{ marginBottom: '24px', textAlign: 'center' }}>
@@ -92,8 +92,8 @@ export function PlantillaCreativa({ datos, perfilGithub, reposGithub, mode = 'pr
                     <span>{skill.name}</span>
                   </div>
                   <div style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: '2px' }}>
-                    <div style={{ 
-                      height: '100%', 
+                    <div style={{
+                      height: '100%',
                       backgroundColor: '#ffffff',
                       borderRadius: '2px',
                       width: skill.level === 'expert' ? '100%' : skill.level === 'advanced' ? '75%' : skill.level === 'intermediate' ? '50%' : '25%'
