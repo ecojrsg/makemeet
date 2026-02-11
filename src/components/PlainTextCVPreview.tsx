@@ -30,9 +30,9 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
   const { personalInfo, experiences, education, skills, languages } = data;
 
   return (
-    <div className="bg-card text-card-foreground p-8 font-mono text-sm leading-relaxed whitespace-pre-wrap w-full max-w-none" id="plain-cv">
+    <div className="bg-card text-card-foreground p-8 font-mono text-sm leading-relaxed whitespace-pre-wrap w-full max-w-none" id="plain-cv" style={{ breakInside: 'avoid-all' }}>
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6" style={{ breakInside: 'avoid', breakAfter: 'auto' }}>
         <div className="text-lg font-bold">{personalInfo.fullName || 'NOMBRE COMPLETO'}</div>
         <div>{personalInfo.title || 'Título Profesional'}</div>
         <div className="mt-2">
@@ -45,7 +45,7 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
 
       {/* Summary */}
       {personalInfo.summary && (
-        <div className="mb-6">
+        <div className="mb-6" style={{ breakInside: 'avoid', breakAfter: 'auto' }}>
           <div className="font-bold border-b border-foreground mb-2">PERFIL PROFESIONAL</div>
           <div>{personalInfo.summary}</div>
         </div>
@@ -53,10 +53,10 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
 
       {/* Experience */}
       {experiences.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" style={{ breakAfter: 'auto' }}>
           <div className="font-bold border-b border-foreground mb-2">EXPERIENCIA LABORAL</div>
           {experiences.map((exp, index) => (
-            <div key={exp.id} className={index > 0 ? 'mt-4' : ''}>
+            <div key={exp.id} className={index > 0 ? 'mt-4' : ''} style={{ breakInside: 'avoid' }}>
               <div className="font-semibold">{exp.position}</div>
               <div>{exp.company}</div>
               <div className="text-muted-foreground">
@@ -70,10 +70,10 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
 
       {/* Education */}
       {education.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" style={{ breakAfter: 'auto' }}>
           <div className="font-bold border-b border-foreground mb-2">EDUCACIÓN</div>
           {education.map((edu, index) => (
-            <div key={edu.id} className={index > 0 ? 'mt-3' : ''}>
+            <div key={edu.id} className={index > 0 ? 'mt-3' : ''} style={{ breakInside: 'avoid' }}>
               <div className="font-semibold">{edu.degree} en {edu.field}</div>
               <div>{edu.institution}</div>
               <div className="text-muted-foreground">
@@ -86,7 +86,7 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
 
       {/* Skills */}
       {skills.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" style={{ breakInside: 'avoid', breakAfter: 'auto' }}>
           <div className="font-bold border-b border-foreground mb-2">HABILIDADES</div>
           <div>
             {skills.map((skill) => (
@@ -98,7 +98,7 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
 
       {/* Languages */}
       {languages.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6" style={{ breakInside: 'avoid', breakAfter: 'auto' }}>
           <div className="font-bold border-b border-foreground mb-2">IDIOMAS</div>
           <div>
             {languages.map((lang) => (
@@ -110,7 +110,7 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
 
       {/* GitHub */}
       {githubProfile && (
-        <div className="mb-6">
+        <div className="mb-6" style={{ breakInside: 'avoid' }}>
           <div className="font-bold border-b border-foreground mb-2">GITHUB</div>
           <div>Usuario: @{githubProfile.login}</div>
           <div>URL: {githubProfile.html_url}</div>
@@ -122,7 +122,7 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
             <div className="mt-3">
               <div className="font-semibold">Repositorios destacados:</div>
               {githubRepos.map((repo) => (
-                <div key={repo.id} className="mt-1">
+                <div key={repo.id} className="mt-1" style={{ breakInside: 'avoid' }}>
                   • {repo.name}{repo.language ? ` (${repo.language})` : ''} - {repo.stargazers_count} ⭐
                   {repo.description && <div className="ml-2 text-muted-foreground">{repo.description}</div>}
                 </div>

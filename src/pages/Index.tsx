@@ -40,6 +40,7 @@ const Index = () => {
   const [cvActualNombre, setCvActualNombre] = useState('');
   const [cvActualEtiquetas, setCvActualEtiquetas] = useState<string[]>([]);
   const [plantillaActual, setPlantillaActual] = useState<TipoPlantilla>('moderno');
+  const [exportandoPDF, setExportandoPDF] = useState(false);
   const {
     profile: githubProfile,
     repos: githubRepos,
@@ -66,87 +67,23 @@ const Index = () => {
       toast.error('Error al exportar el CV');
       return;
     }
+
     try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
-        import('html2canvas-pro'),
-        import('jspdf')
-      ]);
+      setExportandoPDF(true);
 
-      // Clonar elemento fuera del contexto sticky para evitar
-      // desalineación vertical en html2canvas
-      const clone = element.cloneNode(true) as HTMLElement;
-      clone.removeAttribute('id');
+      // Usar window.print() que respeta CSS @media print y page-breaks
+      // Esperar un momento para que el DOM se actualice con exportandoPDF=true
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      container.style.width = `${element.scrollWidth}px`;
-      container.style.zIndex = '-1000';
-      container.style.overflow = 'visible';
-      container.appendChild(clone);
-      document.body.appendChild(container);
+      window.print();
 
-      const canvas = await html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: element.scrollWidth,
-      });
-
-      document.body.removeChild(container);
-
-      const imgData = canvas.toDataURL('image/jpeg', 1);
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      let heightLeft: number;
-      let position: number;
-
-      if (format === 'plain') {
-        const margin = 10;
-        const contentWidth = pageWidth - margin * 2;
-        const contentImgHeight = (canvas.height * contentWidth) / canvas.width;
-        heightLeft = contentImgHeight;
-        position = margin;
-
-        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
-        heightLeft -= (pageHeight - margin);
-
-        while (heightLeft > 0) {
-          pdf.addPage();
-          position = margin - (contentImgHeight - heightLeft);
-          pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
-          heightLeft -= pageHeight;
-        }
-      } else {
-        const imgHeight = (canvas.height * pageWidth) / canvas.width;
-        heightLeft = imgHeight;
-        position = 0;
-
-        pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        while (heightLeft > 0) {
-          position -= pageHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
-          heightLeft -= pageHeight;
-        }
-      }
-
-      pdf.save(`cv-${format === 'styled' ? 'profesional' : 'texto-plano'}.pdf`);
-      toast.success('CV exportado correctamente');
+      toast.success('Listo para exportar. Selecciona "Guardar como PDF" en el diálogo de impresión.');
     } catch (error) {
-      const leftover = document.querySelector('div[style*="left: -9999px"]');
-      if (leftover?.parentNode === document.body) {
-        document.body.removeChild(leftover);
-      }
+      console.error('Error exporting PDF:', error);
       toast.error('Error al exportar. Intenta de nuevo.');
+    } finally {
+      // Esperar a que se cierre el diálogo de impresión
+      setTimeout(() => setExportandoPDF(false), 500);
     }
   };
   const copyPlainText = () => {
@@ -198,7 +135,7 @@ const Index = () => {
   };
   return <div className="min-h-screen bg-background">
     {/* Header */}
-    <header className="border-b border-border bg-card sticky top-0 z-50">
+    <header className="border-b border-border bg-card sticky top-0 z-50 no-print">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -240,12 +177,12 @@ const Index = () => {
     <main className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         {/* Sidebar izquierdo - CVs guardados + Selector de plantillas */}
-        <div className="xl:col-span-3 order-1 xl:order-none">
+        <div className="xl:col-span-3 order-1 xl:order-none no-print">
           <SidebarPanel usuario={!!usuario} cvs={cvs} cvsCargando={cvsCargando} cvActualId={cvActualId ?? undefined} plantillaActual={plantillaActual} onNuevoCV={manejarNuevoCV} onSeleccionarCV={manejarSeleccionarCV} onEliminarCV={manejarEliminarCV} onCambiarPlantilla={setPlantillaActual} />
         </div>
 
         {/* Form Section */}
-        <div className="space-y-4 xl:col-span-5">
+        <div className="space-y-4 xl:col-span-5 no-print">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -265,7 +202,7 @@ const Index = () => {
         <div className="space-y-4 xl:col-span-4">
           <div className="sticky top-24">
             <Tabs value={activePreview} onValueChange={v => setActivePreview(v as 'styled' | 'plain')}>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 no-print">
                 <TabsList>
                   <TabsTrigger value="styled" className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4" />
@@ -288,22 +225,22 @@ const Index = () => {
                 </div>
               </div>
 
-              <TabsContent value="styled" className="m-0">
+              <TabsContent value="styled" className="m-0 print-container">
                 {plantillaActual === 'moderno' && <PlantillaModerna datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} />}
                 {plantillaActual === 'clasico' && <PlantillaClasica datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} />}
                 {plantillaActual === 'minimalista' && <PlantillaMinimalista datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} />}
-                {plantillaActual === 'creativo' && <PlantillaCreativa datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} />}
+                {plantillaActual === 'creativo' && <PlantillaCreativa datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} pdfMode={exportandoPDF} />}
               </TabsContent>
-              <TabsContent value="plain" className="m-0">
-                <div className="overflow-auto scrollbar-hidden bg-muted/30 border border-border rounded-lg" style={{
+              <TabsContent value="plain" className="m-0 print-container">
+                <div className="overflow-auto scrollbar-hidden bg-muted/30 border border-border rounded-lg print-container" style={{
                   maxHeight: 'calc(100vh - 200px)'
                 }}>
-                  <PlainTextCVPreview data={cvData} githubProfile={githubProfile} githubRepos={githubRepos} />
+                  <PlainTextCVPreview data={cvData} githubProfile={githubProfile} reposGithub={githubRepos} />
                 </div>
               </TabsContent>
             </Tabs>
 
-            {activePreview === 'plain' && <p className="text-xs text-muted-foreground mt-3 text-center">
+            {activePreview === 'plain' && <p className="text-xs text-muted-foreground mt-3 text-center no-print">
               Optimizado para sistemas ATS y modelos de IA
             </p>}
           </div>

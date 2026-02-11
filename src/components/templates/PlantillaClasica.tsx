@@ -20,16 +20,17 @@ export function PlantillaClasica({ datos, perfilGithub, reposGithub }: Plantilla
   const color = '#1e3a5f';
 
   return (
-    <div 
+    <div
       id="styled-cv"
-      style={{ 
-        width: '210mm', 
-        minHeight: '297mm', 
-        fontSize: '11pt', 
+      style={{
+        width: '210mm',
+        minHeight: '297mm',
+        fontSize: '11pt',
         lineHeight: '1.5',
         backgroundColor: '#ffffff',
         color: '#1f2937',
-        fontFamily: 'Georgia, "Times New Roman", serif'
+        fontFamily: 'Georgia, "Times New Roman", serif',
+        breakInside: 'avoid-all'
       }}
     >
       {/* Encabezado clásico */}
@@ -94,7 +95,7 @@ export function PlantillaClasica({ datos, perfilGithub, reposGithub }: Plantilla
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {experiences.map((exp) => (
-                <div key={exp.id} style={{ pageBreakInside: 'avoid' }}>
+                <div key={exp.id} style={{ breakInside: 'avoid' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
                     <h3 style={{ fontWeight: 'bold', color: '#111827', fontSize: '14px' }}>{exp.position}</h3>
                     <span style={{ fontSize: '12px', color: '#6b7280', fontStyle: 'italic' }}>
@@ -119,7 +120,7 @@ export function PlantillaClasica({ datos, perfilGithub, reposGithub }: Plantilla
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {education.map((edu) => (
-                <div key={edu.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pageBreakInside: 'avoid' }}>
+                <div key={edu.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', breakInside: 'avoid' }}>
                   <div>
                     <h3 style={{ fontWeight: 'bold', color: '#111827', fontSize: '14px' }}>{edu.degree}</h3>
                     <p style={{ fontSize: '13px', color, fontStyle: 'italic' }}>{edu.institution}</p>
@@ -135,7 +136,7 @@ export function PlantillaClasica({ datos, perfilGithub, reposGithub }: Plantilla
         )}
 
         {/* Habilidades e Idiomas en columnas */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', breakInside: 'avoid' }}>
           {skills.length > 0 && (
             <section>
               <h2 style={{ fontSize: '14px', fontWeight: 'bold', color, textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `1px solid ${color}`, paddingBottom: '6px', marginBottom: '12px' }}>
@@ -167,7 +168,7 @@ export function PlantillaClasica({ datos, perfilGithub, reposGithub }: Plantilla
 
         {/* GitHub */}
         {perfilGithub && (
-          <section style={{ paddingTop: '16px', borderTop: `1px solid ${color}`, pageBreakInside: 'avoid' }}>
+          <section style={{ paddingTop: '16px', borderTop: `1px solid ${color}`, breakInside: 'avoid' }}>
             <h2 style={{ fontSize: '14px', fontWeight: 'bold', color, textTransform: 'uppercase', letterSpacing: '1px', borderBottom: `1px solid ${color}`, paddingBottom: '6px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Github style={{ width: '14px', height: '14px' }} />
               GitHub

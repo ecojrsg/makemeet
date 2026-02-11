@@ -21,16 +21,17 @@ export function PlantillaModerna({ datos, perfilGithub, reposGithub }: Plantilla
   const colorClaro = '#ededfc';
 
   return (
-    <div 
+    <div
       id="styled-cv"
-      style={{ 
-        width: '210mm', 
-        minHeight: '297mm', 
-        fontSize: '11pt', 
+      style={{
+        width: '210mm',
+        minHeight: '297mm',
+        fontSize: '11pt',
         lineHeight: '1.4',
         backgroundColor: '#ffffff',
         color: '#111827',
-        fontFamily: 'system-ui, -apple-system, sans-serif'
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        breakInside: 'avoid-all'
       }}
     >
       {/* Encabezado */}
@@ -99,7 +100,7 @@ export function PlantillaModerna({ datos, perfilGithub, reposGithub }: Plantilla
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {experiences.map((exp) => (
-                <div key={exp.id} style={{ position: 'relative', paddingLeft: '12px', borderLeft: '2px solid #e5e7eb', pageBreakInside: 'avoid' }}>
+                <div key={exp.id} style={{ position: 'relative', paddingLeft: '12px', borderLeft: '2px solid #e5e7eb', breakInside: 'avoid' }}>
                   <div style={{ position: 'absolute', left: '-5px', top: '0', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: color }} />
                   <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2px' }}>
                     <h3 style={{ fontWeight: '600', color: '#111827', fontSize: '14px' }}>{exp.position}</h3>
@@ -125,7 +126,7 @@ export function PlantillaModerna({ datos, perfilGithub, reposGithub }: Plantilla
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {education.map((edu) => (
-                <div key={edu.id} style={{ position: 'relative', paddingLeft: '12px', borderLeft: '2px solid #e5e7eb', pageBreakInside: 'avoid' }}>
+                <div key={edu.id} style={{ position: 'relative', paddingLeft: '12px', borderLeft: '2px solid #e5e7eb', breakInside: 'avoid' }}>
                   <div style={{ position: 'absolute', left: '-5px', top: '0', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: color }} />
                   <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
@@ -149,16 +150,16 @@ export function PlantillaModerna({ datos, perfilGithub, reposGithub }: Plantilla
             <h2 style={{ fontSize: '16px', fontWeight: '600', borderBottom: `2px solid ${color}`, paddingBottom: '4px', marginBottom: '12px', color }}>
               Habilidades
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {skills.map((skill) => (
-                <div key={skill.id}>
+                <div key={skill.id} style={{ width: 'calc(50% - 4px)', breakInside: 'avoid' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
                     <span style={{ fontWeight: '500', color: '#374151' }}>{skill.name}</span>
                   </div>
                   <div style={{ height: '6px', backgroundColor: '#e5e7eb', borderRadius: '9999px', overflow: 'hidden' }}>
-                    <div style={{ 
-                      height: '100%', 
-                      borderRadius: '9999px', 
+                    <div style={{
+                      height: '100%',
+                      borderRadius: '9999px',
                       backgroundColor: color,
                       width: skill.level === 'expert' ? '100%' : skill.level === 'advanced' ? '75%' : skill.level === 'intermediate' ? '50%' : '25%'
                     }} />
@@ -188,7 +189,7 @@ export function PlantillaModerna({ datos, perfilGithub, reposGithub }: Plantilla
 
         {/* GitHub */}
         {perfilGithub && (
-          <section style={{ paddingTop: '16px', borderTop: '1px solid #e5e7eb', pageBreakInside: 'avoid' }}>
+          <section style={{ paddingTop: '16px', borderTop: '1px solid #e5e7eb', breakInside: 'avoid' }}>
             <h2 style={{ fontSize: '16px', fontWeight: '600', borderBottom: `2px solid ${color}`, paddingBottom: '4px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color }}>
               <Github style={{ width: '16px', height: '16px' }} />
               GitHub

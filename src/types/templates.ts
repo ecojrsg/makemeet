@@ -8,6 +8,7 @@ export interface PlantillaProps {
   datos: CVData;
   perfilGithub: GitHubProfile | null;
   reposGithub: GitHubRepo[];
+  pdfMode?: boolean;
 }
 
 // Información de cada plantilla para el selector

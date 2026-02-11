@@ -1,0 +1,124 @@
+/* Estilos de impresión para generar PDFs multi-página */
+
+@media print {
+
+  /* Configuración de página con márgenes para permitir flujo entre páginas */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  /* Preservar colores de fondo */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ===== OCULTAR ELEMENTOS DE UI ===== */
+
+  /* Ocultar elementos marcados con no-print */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ocultar botones, navegación y diálogos */
+  button,
+  nav,
+  [role="dialog"],
+  [data-radix-popper-content-wrapper] {
+    display: none !important;
+  }
+
+  /* ===== RESETEAR LAYOUTS PARA IMPRESIÓN ===== */
+
+  /* Hacer que los contenedores ancestros sean visibles y fluyan normalmente */
+  body,
+  #root,
+  #root>* {
+    display: block !important;
+    overflow: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Resetear el grid de layout para que solo muestre la preview */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  main>div {
+    display: block !important;
+    gap: 0 !important;
+  }
+
+  /* Resetear sticky positioning */
+  .sticky {
+    position: static !important;
+  }
+
+  /* ===== MOSTRAR SOLO EL CV ===== */
+
+  /* El CV ocupa todo el ancho y permite multi-página */
+  #styled-cv,
+  #plain-cv {
+    width: 100% !important;
+    max-width: 210mm !important;
+    min-height: auto !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  /* ===== CONTROL DE SALTOS DE PÁGINA ===== */
+
+  /*
+   * Solo evitar cortes dentro de elementos individuales pequeños
+   * (entradas de experiencia, tarjetas de educación, etc.)
+   * NO aplicar a contenedores grandes que deben poder fluir entre páginas.
+   */
+  div[style*="breakInside"],
+  div[style*="break-inside"] {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Asegurar que el texto no se corte a mitad de línea */
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  span {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Evitar que las imágenes se corten */
+  img {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Estilos específicos para PlainTextCVPreview */
+  #plain-cv {
+    background: white !important;
+    color: black !important;
+    padding: 10mm !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Estilos específicos para plantillas styled */
+  #styled-cv {
+    background: white !important;
+  }
+}
