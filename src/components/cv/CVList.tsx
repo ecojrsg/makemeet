@@ -36,7 +36,7 @@ export function CVList({ cvs, cargando, onSeleccionar, onEliminar, cvActualId }:
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pb-2">
       {cvs.map((cv) => (
         <Card 
           key={cv.id} 
@@ -57,7 +57,7 @@ export function CVList({ cvs, cargando, onSeleccionar, onEliminar, cvActualId }:
                   Actualizado {format(new Date(cv.updated_at), "d 'de' MMM, yyyy", { locale: es })}
                 </p>
                 {cv.etiquetas.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
+                  <div className="flex flex-wrap gap-1.5 mt-2">
                     {cv.etiquetas.map((etiqueta, index) => (
                       <Badge key={index} variant="secondary" className="text-xs">
                         {etiqueta}
