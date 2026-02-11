@@ -75,7 +75,7 @@ function obtenerKeyTemporal(): APIKeyTemporal | null {
   try {
     const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!stored) return null;
-    
+
     const data: APIKeyTemporal = JSON.parse(stored);
     return data;
   } catch (error) {
@@ -112,7 +112,7 @@ export function eliminarKeyTemporal(): void {
 async function obtenerKeyGuardadaActiva(): Promise<APIKeySaved | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       console.warn('[aiService] Usuario no autenticado');
       return null;
@@ -134,7 +134,6 @@ async function obtenerKeyGuardadaActiva(): Promise<APIKeySaved | null> {
       console.warn('[aiService] Error al obtener key guardada activa:', error.message);
       return null;
     }
-
     return data as APIKeySaved;
   } catch (error) {
     console.warn('[aiService] Error inesperado al obtener key guardada:', error);
@@ -149,13 +148,13 @@ async function obtenerKeyGuardadaActiva(): Promise<APIKeySaved | null> {
 export async function obtenerConfigIA(): Promise<ConfigIA | null> {
   // 1. Intentar obtener key temporal
   const keyTemporal = obtenerKeyTemporal();
-  
+
   if (keyTemporal) {
     console.log('[aiService] 🔑 Usando key temporal:', {
       proveedor: keyTemporal.proveedor,
       modelo: keyTemporal.modelo,
     });
-    
+
     return {
       provider: keyTemporal.proveedor,
       apiKey: keyTemporal.clave,
@@ -168,14 +167,14 @@ export async function obtenerConfigIA(): Promise<ConfigIA | null> {
 
   // 2. Si no hay temporal, intentar obtener key guardada activa
   const keyGuardada = await obtenerKeyGuardadaActiva();
-  
+
   if (keyGuardada) {
     console.log('[aiService] 💾 Usando key guardada:', {
       nombre: keyGuardada.nombre,
       proveedor: keyGuardada.proveedor,
       modelo: keyGuardada.modelo,
     });
-    
+
     return {
       provider: keyGuardada.proveedor,
       apiKey: keyGuardada.clave,
@@ -204,7 +203,7 @@ export async function iaDisponible(): Promise<boolean> {
 async function guardarLog(input: LogInput): Promise<void> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       console.warn('[aiService] No se puede guardar log: usuario no autenticado');
       return;
@@ -420,13 +419,13 @@ function handleApiError(status: number, errorData?: any): never {
   if (status === 429) {
     throw new Error('Demasiadas solicitudes. Intenta de nuevo en un momento.');
   }
-  
+
   // Manejo específico de errores de cuota/créditos
   const errorMessage = errorData?.error?.message || '';
   if (errorMessage.includes('insufficient_quota') || errorMessage.includes('quota')) {
     throw new Error('Tu API key se quedó sin créditos. Recarga tu cuenta o usa otra key.');
   }
-  
+
   throw new Error(`Error del servicio de IA (${status}). Intenta de nuevo.`);
 }
 
@@ -439,18 +438,18 @@ export async function probarAPIKey(
   modelo: string
 ): Promise<{ exito: boolean; mensaje: string }> {
   const textoSimple = 'Hola';
-  
+
   try {
     console.log('[aiService] 🧪 Probando API key:', { proveedor, modelo });
-    
+
     let resultado: string;
-    
+
     if (proveedor === 'openai') {
       resultado = await llamarOpenAI(apiKey, modelo, textoSimple);
     } else {
       resultado = await llamarGemini(apiKey, modelo, textoSimple);
     }
-    
+
     if (resultado && resultado.length > 0) {
       console.log('[aiService] ✅ Prueba exitosa');
       return {
@@ -458,14 +457,14 @@ export async function probarAPIKey(
         mensaje: 'La API key funciona correctamente.',
       };
     }
-    
+
     return {
       exito: false,
       mensaje: 'La API respondió pero no generó contenido.',
     };
   } catch (error) {
     console.error('[aiService] ❌ Error en prueba:', error);
-    
+
     return {
       exito: false,
       mensaje: error instanceof Error ? error.message : 'Error al probar la API key.',

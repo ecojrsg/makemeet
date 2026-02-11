@@ -14,6 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_request_logs: {
+        Row: {
+          id: string
+          user_id: string
+          api_key_id: string | null
+          api_key_nombre: string
+          proveedor: string
+          modelo: string
+          contexto: string
+          info_adicional: string | null
+          prompt: string
+          respuesta: string
+          tiempo_respuesta_ms: number | null
+          intentos: number
+          error_mensaje: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          api_key_id?: string | null
+          api_key_nombre: string
+          proveedor: string
+          modelo: string
+          contexto: string
+          info_adicional?: string | null
+          prompt: string
+          respuesta: string
+          tiempo_respuesta_ms?: number | null
+          intentos?: number
+          error_mensaje?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          api_key_id?: string | null
+          api_key_nombre?: string
+          proveedor?: string
+          modelo?: string
+          contexto?: string
+          info_adicional?: string | null
+          prompt?: string
+          respuesta?: string
+          tiempo_respuesta_ms?: number | null
+          intentos?: number
+          error_mensaje?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_request_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_request_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      api_keys: {
+        Row: {
+          id: string
+          user_id: string
+          nombre: string
+          proveedor: string
+          clave: string
+          modelo: string
+          activa: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          nombre: string
+          proveedor: string
+          clave: string
+          modelo: string
+          activa?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          nombre?: string
+          proveedor?: string
+          clave?: string
+          modelo?: string
+          activa?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       configuracion: {
         Row: {
           id: string

@@ -6,6 +6,10 @@ import {
   SidebarGroupContent,
   SidebarGroupAction,
   SidebarHeader,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
   SidebarSeparator,
   SidebarRail,
 } from '@/components/ui/sidebar';
@@ -14,7 +18,8 @@ import { CVGuardado } from '@/hooks/useCVs';
 import { TipoPlantilla } from '@/types/templates';
 import { CVList } from '@/components/cv/CVList';
 import { SelectorPlantilla } from '@/components/cv/SelectorPlantilla';
-import { FolderOpen, Plus, Palette } from 'lucide-react';
+import { FolderOpen, Plus, Palette, Settings } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface AppSidebarProps {
   usuario: boolean;
@@ -88,6 +93,19 @@ export function AppSidebar({
           </SidebarGroup>
         </ScrollArea>
       </SidebarContent>
+
+      <SidebarFooter className="border-t">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Configuración">
+              <Link to="/setup">
+                <Settings aria-hidden="true" />
+                <span>Setup</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>
