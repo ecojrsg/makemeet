@@ -1,13 +1,15 @@
 import { supabase } from '@/integrations/supabase/client';
-
-export interface ConfigIA {
-  provider: 'openai' | 'gemini';
-  apiKey: string;
-}
+import type {
+  ConfigIA,
+  APIKeyPersonal,
+  APIKeyGlobal,
+  LocalStoragePersonalKeys,
+  LocalStorageActiveKey,
+} from '@/types/apiKeys';
 
 const STORAGE_KEYS = {
-  provider: 'ia_provider',
-  apiKey: 'ia_api_key',
+  personalKeys: 'ai_personal_keys',
+  activeKey: 'ai_active_key',
 };
 
 const SYSTEM_PROMPT =
@@ -25,67 +27,116 @@ const CONTEXTO_PROMPTS: Record<string, string> = {
 };
 
 /**
- * Obtiene la configuración de IA.
- * Prioridad: localStorage > tabla configuracion de Supabase
+ * Obtiene las API keys personales desde localStorage
+ */
+function obtenerKeysPersonales(): APIKeyPersonal[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.personalKeys);
+    if (!stored) return [];
+    
+    const data: LocalStoragePersonalKeys = JSON.parse(stored);
+    return data.keys || [];
+  } catch (error) {
+    console.warn('[aiService] Error al leer keys personales de localStorage:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene las API keys globales desde Supabase
+ */
+async function obtenerKeysGlobales(): Promise<APIKeyGlobal[]> {
+  try {
+    // @ts-ignore - tabla api_keys no está en tipos generados aún
+    const { data, error } = await supabase.from('api_keys').select('*').order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('[aiService] Error al leer keys globales de Supabase:', error.message);
+      return [];
+    }
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      nombre: row.nombre,
+      proveedor: row.proveedor as 'openai' | 'gemini',
+      clave: row.clave,
+      modelo: row.modelo,
+      tipo: 'global',
+      created_by: row.created_by,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }));
+  } catch (error) {
+    console.warn('[aiService] Error inesperado al leer keys globales:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene la key activa seleccionada por el usuario
+ */
+function obtenerKeyActiva(): LocalStorageActiveKey | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.activeKey);
+    if (!stored) return null;
+    
+    return JSON.parse(stored);
+  } catch (error) {
+    console.warn('[aiService] Error al leer key activa de localStorage:', error);
+    return null;
+  }
+}
+
+/**
+ * Obtiene la configuración de IA actual (key activa con sus datos)
+ * Prioridad: key activa seleccionada > primera key disponible
  */
 export async function obtenerConfigIA(): Promise<ConfigIA | null> {
-  // 1. Verificar localStorage
-  const localProvider = localStorage.getItem(STORAGE_KEYS.provider);
-  const localApiKey = localStorage.getItem(STORAGE_KEYS.apiKey);
+  const keyActiva = obtenerKeyActiva();
+  const keysPersonales = obtenerKeysPersonales();
+  const keysGlobales = await obtenerKeysGlobales();
 
-  if (localProvider && localApiKey) {
+  // Si hay una key activa seleccionada, buscarla
+  if (keyActiva) {
+    if (keyActiva.tipo === 'personal') {
+      const key = keysPersonales.find((k) => k.id === keyActiva.keyId);
+      if (key) {
+        return {
+          provider: key.proveedor,
+          apiKey: key.clave,
+          modelo: key.modelo,
+        };
+      }
+    } else if (keyActiva.tipo === 'global') {
+      const key = keysGlobales.find((k) => k.id === keyActiva.keyId);
+      if (key) {
+        return {
+          provider: key.proveedor,
+          apiKey: key.clave,
+          modelo: key.modelo,
+        };
+      }
+    }
+  }
+
+  // Si no hay key activa o no se encontró, usar la primera disponible
+  // Prioridad: personal > global
+  if (keysPersonales.length > 0) {
+    const key = keysPersonales[0];
     return {
-      provider: localProvider as 'openai' | 'gemini',
-      apiKey: localApiKey,
+      provider: key.proveedor,
+      apiKey: key.clave,
+      modelo: key.modelo,
     };
   }
 
-  // 2. Verificar Supabase
-  try {
-    const { data, error } = await supabase
-      .from('configuracion')
-      .select('clave, valor')
-      .in('clave', ['ai_provider', 'openai_api_key', 'gemini_api_key']);
-
-    if (error) {
-      console.warn('[aiService] Error al leer configuracion de Supabase:', error.message);
-      return null;
-    }
-
-    if (!data || data.length === 0) {
-      console.warn('[aiService] No se encontraron claves de IA en la tabla configuracion');
-      return null;
-    }
-
-    const config: Record<string, string> = {};
-    for (const row of data) {
-      config[row.clave] = row.valor;
-    }
-
-    // Si hay provider explícito, usarlo
-    let provider = config.ai_provider as 'openai' | 'gemini' | undefined;
-    let apiKey: string | undefined;
-
-    if (provider) {
-      apiKey = provider === 'openai' ? config.openai_api_key : config.gemini_api_key;
-    } else {
-      // Auto-detectar provider por la key disponible
-      if (config.openai_api_key) {
-        provider = 'openai';
-        apiKey = config.openai_api_key;
-      } else if (config.gemini_api_key) {
-        provider = 'gemini';
-        apiKey = config.gemini_api_key;
-      }
-    }
-
-    if (provider && apiKey) {
-      return { provider, apiKey };
-    }
-
-    console.warn('[aiService] Configuracion incompleta en Supabase. Claves encontradas:', Object.keys(config));
-  } catch (e) {
-    console.warn('[aiService] Error inesperado al leer configuracion:', e);
+  if (keysGlobales.length > 0) {
+    const key = keysGlobales[0];
+    return {
+      provider: key.proveedor,
+      apiKey: key.clave,
+      modelo: key.modelo,
+    };
   }
 
   return null;
@@ -97,49 +148,6 @@ export async function obtenerConfigIA(): Promise<ConfigIA | null> {
 export async function iaDisponible(): Promise<boolean> {
   const config = await obtenerConfigIA();
   return config !== null;
-}
-
-/**
- * Guarda la configuración de IA en Supabase y localStorage
- */
-export async function guardarConfigIA(
-  provider: 'openai' | 'gemini',
-  apiKey: string
-): Promise<void> {
-  // Guardar en localStorage
-  localStorage.setItem(STORAGE_KEYS.provider, provider);
-  localStorage.setItem(STORAGE_KEYS.apiKey, apiKey);
-
-  // Guardar en Supabase (upsert)
-  try {
-    const entries = [
-      { clave: 'ai_provider', valor: provider },
-      {
-        clave: provider === 'openai' ? 'openai_api_key' : 'gemini_api_key',
-        valor: apiKey,
-      },
-    ];
-
-    for (const entry of entries) {
-      // Intentar actualizar primero
-      const { data } = await supabase
-        .from('configuracion')
-        .select('id')
-        .eq('clave', entry.clave)
-        .limit(1);
-
-      if (data && data.length > 0) {
-        await supabase
-          .from('configuracion')
-          .update({ valor: entry.valor })
-          .eq('clave', entry.clave);
-      } else {
-        await supabase.from('configuracion').insert(entry);
-      }
-    }
-  } catch {
-    // Si falla Supabase, al menos quedó en localStorage
-  }
 }
 
 /**
@@ -167,13 +175,13 @@ export async function mejorarTextoConIA(
   userPrompt += `\n\n${texto}`;
 
   if (config.provider === 'openai') {
-    return llamarOpenAI(config.apiKey, userPrompt);
+    return llamarOpenAI(config.apiKey, config.modelo, userPrompt);
   } else {
-    return llamarGemini(config.apiKey, userPrompt);
+    return llamarGemini(config.apiKey, config.modelo, userPrompt);
   }
 }
 
-async function llamarOpenAI(apiKey: string, userPrompt: string): Promise<string> {
+async function llamarOpenAI(apiKey: string, modelo: string, userPrompt: string): Promise<string> {
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -181,7 +189,7 @@ async function llamarOpenAI(apiKey: string, userPrompt: string): Promise<string>
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: modelo,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
@@ -205,8 +213,8 @@ async function llamarOpenAI(apiKey: string, userPrompt: string): Promise<string>
   return resultado;
 }
 
-async function llamarGemini(apiKey: string, userPrompt: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+async function llamarGemini(apiKey: string, modelo: string, userPrompt: string): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
   const response = await fetch(url, {
     method: 'POST',

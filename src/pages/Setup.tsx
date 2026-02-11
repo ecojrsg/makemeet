@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSetup } from '@/contexts/SetupContext';
 import { SetupStatus } from '@/components/setup/SetupStatus';
+import { APIKeyManager } from '@/components/setup/APIKeyManager';
 import { SQL_SETUP, copiarSQLAlPortapapeles } from '@/services/setupService';
 
 export default function Setup() {
@@ -61,6 +62,9 @@ export default function Setup() {
 
         {/* Estado del sistema */}
         <SetupStatus />
+
+        {/* Gestión de API Keys */}
+        <APIKeyManager />
 
         {/* Estado general */}
         {listo ? (

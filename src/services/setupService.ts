@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   user_id UUID NOT NULL UNIQUE,
   nombre TEXT,
   avatar_url TEXT,
+  is_admin BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -28,6 +29,18 @@ CREATE TABLE IF NOT EXISTS public.cvs (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+-- Tabla de API Keys globales para IA
+CREATE TABLE IF NOT EXISTS public.api_keys (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  nombre TEXT NOT NULL,
+  proveedor TEXT NOT NULL CHECK (proveedor IN ('openai', 'gemini')),
+  clave TEXT NOT NULL,
+  modelo TEXT NOT NULL,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
 -- ============================================
 -- SEGURIDAD (RLS)
 -- ============================================
@@ -35,6 +48,7 @@ CREATE TABLE IF NOT EXISTS public.cvs (
 -- Habilitar RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cvs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para profiles
 CREATE POLICY "Usuarios pueden ver su propio perfil" 
@@ -70,6 +84,42 @@ CREATE POLICY "Usuarios pueden eliminar sus propios CVs"
 ON public.cvs FOR DELETE 
 USING (auth.uid() = user_id);
 
+-- Políticas para api_keys
+CREATE POLICY "Usuarios autenticados pueden ver API keys globales"
+ON public.api_keys FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY "Solo admins pueden insertar API keys globales"
+ON public.api_keys FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE user_id = auth.uid() AND is_admin = true
+  )
+);
+
+CREATE POLICY "Solo admins pueden actualizar API keys globales"
+ON public.api_keys FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE user_id = auth.uid() AND is_admin = true
+  )
+);
+
+CREATE POLICY "Solo admins pueden eliminar API keys globales"
+ON public.api_keys FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE user_id = auth.uid() AND is_admin = true
+  )
+);
+
 -- ============================================
 -- FUNCIONES Y TRIGGERS
 -- ============================================
@@ -81,9 +131,18 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
+DECLARE
+  es_primer_usuario BOOLEAN;
 BEGIN
-  INSERT INTO public.profiles (user_id, nombre)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email));
+  -- Verificar si es el primer usuario
+  SELECT COUNT(*) = 0 INTO es_primer_usuario FROM public.profiles;
+  
+  INSERT INTO public.profiles (user_id, nombre, is_admin)
+  VALUES (
+    NEW.id, 
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
+    es_primer_usuario
+  );
   RETURN NEW;
 END;
 $$;
@@ -115,6 +174,11 @@ CREATE TRIGGER update_profiles_updated_at
 DROP TRIGGER IF EXISTS update_cvs_updated_at ON public.cvs;
 CREATE TRIGGER update_cvs_updated_at
   BEFORE UPDATE ON public.cvs
+  FOR EACH ROW EXECUTE FUNCTION public.actualizar_updated_at();
+
+DROP TRIGGER IF EXISTS update_api_keys_updated_at ON public.api_keys;
+CREATE TRIGGER update_api_keys_updated_at
+  BEFORE UPDATE ON public.api_keys
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_updated_at();
 
 -- ============================================
@@ -154,6 +218,7 @@ export interface ResultadoVerificacion {
     profiles: boolean;
     cvs: boolean;
     configuracion: boolean;
+    api_keys: boolean;
   };
   proveedoresAuth: string[];
   errorMensaje: string | null;
@@ -175,8 +240,8 @@ export async function verificarConexion(): Promise<boolean> {
 /**
  * Verifica si las tablas necesarias existen
  */
-export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boolean; configuracion: boolean }> {
-  const resultado = { profiles: false, cvs: false, configuracion: false };
+export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boolean; configuracion: boolean; api_keys: boolean }> {
+  const resultado = { profiles: false, cvs: false, configuracion: false, api_keys: false };
 
   try {
     // Verificar tabla profiles
@@ -231,6 +296,18 @@ export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boole
     resultado.configuracion = false;
   }
 
+  try {
+    // Verificar tabla api_keys (opcional, no bloqueante)
+    // @ts-ignore - tabla api_keys no está en tipos generados aún
+    const { error: errorApiKeys } = await supabase.from('api_keys').select('id').limit(1);
+
+    if (!errorApiKeys) {
+      resultado.api_keys = true;
+    }
+  } catch {
+    resultado.api_keys = false;
+  }
+
   return resultado;
 }
 
@@ -253,7 +330,7 @@ export function obtenerProveedoresConfigurados(): string[] {
 export async function verificarSistema(): Promise<ResultadoVerificacion> {
   const resultado: ResultadoVerificacion = {
     conexionOk: false,
-    tablas: { profiles: false, cvs: false, configuracion: false },
+    tablas: { profiles: false, cvs: false, configuracion: false, api_keys: false },
     proveedoresAuth: [],
     errorMensaje: null,
   };
