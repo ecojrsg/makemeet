@@ -1,4 +1,4 @@
-import { CheckCircle, XCircle, AlertCircle, Loader2, Database, Shield, Users } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Loader2, Database, Shield, Users, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useSetup } from '@/contexts/SetupContext';
@@ -37,13 +37,14 @@ function ElementoEstado({ titulo, ok, verificando, icono, descripcion }: Element
 }
 
 export function SetupStatus() {
-  const { 
-    verificando, 
-    conexionOk, 
-    tablasOk, 
+  const {
+    verificando,
+    conexionOk,
+    tablasOk,
     tablasFaltantes,
+    configuracionOk,
     proveedoresAuth,
-    errorMensaje 
+    errorMensaje
   } = useSetup();
 
   return (
@@ -78,6 +79,15 @@ export function SetupStatus() {
               ? 'Todas las tablas configuradas' 
               : `Faltantes: ${tablasFaltantes.join(', ')}`
           }
+        />
+
+        {/* Configuración de IA */}
+        <ElementoEstado
+          titulo="Inteligencia Artificial"
+          ok={configuracionOk}
+          verificando={verificando}
+          icono={<Sparkles className="h-5 w-5" />}
+          descripcion={configuracionOk ? 'Tabla de configuración disponible' : 'Opcional — se configurará después'}
         />
 
         {/* Proveedores de autenticación */}

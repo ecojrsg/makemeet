@@ -6,6 +6,7 @@ interface EstadoSetup {
   conexionOk: boolean;
   tablasOk: boolean;
   tablasFaltantes: string[];
+  configuracionOk: boolean;
   proveedoresAuth: string[];
   errorMensaje: string | null;
   listo: boolean;
@@ -22,6 +23,7 @@ const ESTADO_INICIAL: EstadoSetup = {
   conexionOk: false,
   tablasOk: false,
   tablasFaltantes: [],
+  configuracionOk: false,
   proveedoresAuth: [],
   errorMensaje: null,
   listo: false,
@@ -42,12 +44,13 @@ export function SetupProvider({ children }: { children: ReactNode }) {
       
       const tablasOk = resultado.tablas.profiles && resultado.tablas.cvs;
       const listo = resultado.conexionOk && tablasOk;
-      
+
       setEstado({
         verificando: false,
         conexionOk: resultado.conexionOk,
         tablasOk,
         tablasFaltantes,
+        configuracionOk: resultado.tablas.configuracion,
         proveedoresAuth: resultado.proveedoresAuth,
         errorMensaje: resultado.errorMensaje,
         listo,
@@ -58,6 +61,7 @@ export function SetupProvider({ children }: { children: ReactNode }) {
         conexionOk: false,
         tablasOk: false,
         tablasFaltantes: ['profiles', 'cvs'],
+        configuracionOk: false,
         proveedoresAuth: [],
         errorMensaje: error instanceof Error ? error.message : 'Error desconocido',
         listo: false,

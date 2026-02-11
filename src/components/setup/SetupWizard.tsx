@@ -1,17 +1,28 @@
 import { useState } from 'react';
-import { Loader2, Copy, Check, RefreshCw, ExternalLink, Database, AlertTriangle } from 'lucide-react';
+import { Loader2, Copy, Check, RefreshCw, ExternalLink, Database, AlertTriangle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSetup } from '@/contexts/SetupContext';
 import { SQL_SETUP, copiarSQLAlPortapapeles } from '@/services/setupService';
+import { guardarConfigIA } from '@/services/aiService';
+import { toast } from '@/hooks/use-toast';
 import { SetupStatus } from './SetupStatus';
 
 export function SetupWizard() {
   const { verificando, conexionOk, tablasOk, listo, reintentar } = useSetup();
   const [copiado, setCopiado] = useState(false);
   const [reintentando, setReintentando] = useState(false);
+  const [iaConfigVisitada, setIaConfigVisitada] = useState(
+    () => localStorage.getItem('ia_config_visitada') === 'true'
+  );
+  const [iaProvider, setIaProvider] = useState<'openai' | 'gemini'>('openai');
+  const [iaApiKey, setIaApiKey] = useState('');
+  const [guardandoIA, setGuardandoIA] = useState(false);
 
   const manejarCopiar = async () => {
     const exito = await copiarSQLAlPortapapeles();
@@ -27,9 +38,103 @@ export function SetupWizard() {
     setReintentando(false);
   };
 
-  // Si está listo, no mostrar el wizard
-  if (listo) {
+  const manejarOmitirIA = () => {
+    localStorage.setItem('ia_config_visitada', 'true');
+    setIaConfigVisitada(true);
+  };
+
+  const manejarGuardarIA = async () => {
+    if (!iaApiKey.trim()) return;
+    setGuardandoIA(true);
+    try {
+      await guardarConfigIA(iaProvider, iaApiKey.trim());
+      localStorage.setItem('ia_config_visitada', 'true');
+      toast({ title: 'Configuración de IA guardada correctamente' });
+      setIaConfigVisitada(true);
+    } catch {
+      toast({ title: 'Error al guardar', description: 'No se pudo guardar en la base de datos, pero se guardó localmente.', variant: 'destructive' });
+      localStorage.setItem('ia_config_visitada', 'true');
+      setIaConfigVisitada(true);
+    } finally {
+      setGuardandoIA(false);
+    }
+  };
+
+  // Si está listo y ya visitó el paso de IA, no mostrar el wizard
+  if (listo && iaConfigVisitada) {
     return null;
+  }
+
+  // Si está listo pero no ha configurado IA, mostrar el paso de IA
+  if (listo && !iaConfigVisitada) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl space-y-6">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-4">
+              <Sparkles className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Configurar IA (Opcional)</h1>
+            <p className="text-muted-foreground">
+              Configura una API key para mejorar textos del CV con inteligencia artificial
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                API Key de IA
+              </CardTitle>
+              <CardDescription>
+                Elige un proveedor e ingresa tu API key. Puedes usar OpenAI (ChatGPT) o Google Gemini.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Proveedor</Label>
+                <Select value={iaProvider} onValueChange={(v) => setIaProvider(v as 'openai' | 'gemini')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
+                    <SelectItem value="gemini">Google Gemini</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>API Key</Label>
+                <Input
+                  type="password"
+                  value={iaApiKey}
+                  onChange={(e) => setIaApiKey(e.target.value)}
+                  placeholder={iaProvider === 'openai' ? 'sk-...' : 'AIza...'}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {iaProvider === 'openai'
+                    ? 'Obtén tu API key en platform.openai.com'
+                    : 'Obtén tu API key en aistudio.google.com'}
+                </p>
+              </div>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+              <Button
+                onClick={manejarGuardarIA}
+                disabled={!iaApiKey.trim() || guardandoIA}
+                className="flex-1"
+              >
+                {guardandoIA && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Guardar configuración
+              </Button>
+              <Button variant="ghost" onClick={manejarOmitirIA}>
+                Omitir
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (

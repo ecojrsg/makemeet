@@ -116,6 +116,36 @@ DROP TRIGGER IF EXISTS update_cvs_updated_at ON public.cvs;
 CREATE TRIGGER update_cvs_updated_at
   BEFORE UPDATE ON public.cvs
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_updated_at();
+
+-- ============================================
+-- CONFIGURACIÓN (key-value)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.configuracion (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  clave TEXT NOT NULL UNIQUE,
+  valor TEXT NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.configuracion ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Usuarios autenticados pueden leer configuracion"
+ON public.configuracion FOR SELECT
+USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Usuarios autenticados pueden insertar configuracion"
+ON public.configuracion FOR INSERT
+WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Usuarios autenticados pueden actualizar configuracion"
+ON public.configuracion FOR UPDATE
+USING (auth.role() = 'authenticated');
+
+DROP TRIGGER IF EXISTS update_configuracion_updated_at ON public.configuracion;
+CREATE TRIGGER update_configuracion_updated_at
+  BEFORE UPDATE ON public.configuracion
+  FOR EACH ROW EXECUTE FUNCTION public.actualizar_updated_at();
 `;
 
 export interface ResultadoVerificacion {
@@ -123,6 +153,7 @@ export interface ResultadoVerificacion {
   tablas: {
     profiles: boolean;
     cvs: boolean;
+    configuracion: boolean;
   };
   proveedoresAuth: string[];
   errorMensaje: string | null;
@@ -144,8 +175,8 @@ export async function verificarConexion(): Promise<boolean> {
 /**
  * Verifica si las tablas necesarias existen
  */
-export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boolean }> {
-  const resultado = { profiles: false, cvs: false };
+export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boolean; configuracion: boolean }> {
+  const resultado = { profiles: false, cvs: false, configuracion: false };
 
   try {
     // Verificar tabla profiles
@@ -186,6 +217,20 @@ export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boole
     resultado.cvs = false;
   }
 
+  try {
+    // Verificar tabla configuracion (opcional, no bloqueante)
+    const { error: errorConfig } = await supabase
+      .from('configuracion')
+      .select('id')
+      .limit(1);
+
+    if (!errorConfig) {
+      resultado.configuracion = true;
+    }
+  } catch {
+    resultado.configuracion = false;
+  }
+
   return resultado;
 }
 
@@ -208,7 +253,7 @@ export function obtenerProveedoresConfigurados(): string[] {
 export async function verificarSistema(): Promise<ResultadoVerificacion> {
   const resultado: ResultadoVerificacion = {
     conexionOk: false,
-    tablas: { profiles: false, cvs: false },
+    tablas: { profiles: false, cvs: false, configuracion: false },
     proveedoresAuth: [],
     errorMensaje: null,
   };

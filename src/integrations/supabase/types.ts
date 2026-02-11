@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      configuracion: {
+        Row: {
+          id: string
+          clave: string
+          valor: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          clave: string
+          valor: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          clave?: string
+          valor?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cvs: {
         Row: {
           created_at: string

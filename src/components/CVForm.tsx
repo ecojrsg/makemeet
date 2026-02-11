@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { CVData, Experience, Education, Skill, Language } from '@/types/cv';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Trash2, User, Briefcase, GraduationCap, Code, Languages, Github, Camera, X } from 'lucide-react';
+import { Plus, Trash2, User, Briefcase, GraduationCap, Code, Languages, Github, Camera, X, Sparkles, Loader2 } from 'lucide-react';
+import { mejorarTextoConIA } from '@/services/aiService';
+import { toast } from '@/hooks/use-toast';
 
 interface CVFormProps {
   data: CVData;
@@ -18,6 +20,31 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 
 export function CVForm({ data, onChange }: CVFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mejorando, setMejorando] = useState<string | null>(null);
+
+  const handleMejorarConIA = async (
+    campoId: string,
+    texto: string,
+    contexto: 'resumen' | 'experiencia' | 'educacion',
+    onMejorado: (texto: string) => void,
+    infoAdicional?: string
+  ) => {
+    if (!texto.trim()) return;
+    setMejorando(campoId);
+    try {
+      const mejorado = await mejorarTextoConIA(texto, contexto, infoAdicional);
+      onMejorado(mejorado);
+      toast({ title: 'Texto mejorado con IA' });
+    } catch (e) {
+      toast({
+        title: 'Error al mejorar con IA',
+        description: e instanceof Error ? e.message : 'Error desconocido',
+        variant: 'destructive',
+      });
+    } finally {
+      setMejorando(null);
+    }
+  };
 
   const updatePersonalInfo = (field: string, value: string) => {
     onChange({
@@ -261,7 +288,30 @@ export function CVForm({ data, onChange }: CVFormProps) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="summary">Resumen profesional</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="summary">Resumen profesional</Label>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs h-7"
+                disabled={!data.personalInfo.summary.trim() || mejorando !== null}
+                onClick={() =>
+                  handleMejorarConIA(
+                    'summary',
+                    data.personalInfo.summary,
+                    'resumen',
+                    (t) => updatePersonalInfo('summary', t)
+                  )
+                }
+              >
+                {mejorando === 'summary' ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3 w-3" />
+                )}
+                Mejorar con IA
+              </Button>
+            </div>
             <Textarea
               id="summary"
               value={data.personalInfo.summary}
@@ -367,7 +417,31 @@ export function CVForm({ data, onChange }: CVFormProps) {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Descripción</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Descripción</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 text-xs h-7"
+                    disabled={!exp.description.trim() || mejorando !== null}
+                    onClick={() =>
+                      handleMejorarConIA(
+                        `exp-${exp.id}`,
+                        exp.description,
+                        'experiencia',
+                        (t) => updateExperience(exp.id, 'description', t),
+                        `${exp.position} en ${exp.company}`
+                      )
+                    }
+                  >
+                    {mejorando === `exp-${exp.id}` ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3 w-3" />
+                    )}
+                    Mejorar con IA
+                  </Button>
+                </div>
                 <Textarea
                   value={exp.description}
                   onChange={(e) => updateExperience(exp.id, 'description', e.target.value)}
@@ -452,6 +526,39 @@ export function CVForm({ data, onChange }: CVFormProps) {
                     onChange={(e) => updateEducation(edu.id, 'endDate', e.target.value)}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Descripción</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 text-xs h-7"
+                    disabled={!(edu.description || '').trim() || mejorando !== null}
+                    onClick={() =>
+                      handleMejorarConIA(
+                        `edu-${edu.id}`,
+                        edu.description || '',
+                        'educacion',
+                        (t) => updateEducation(edu.id, 'description', t),
+                        `${edu.degree} en ${edu.field}`
+                      )
+                    }
+                  >
+                    {mejorando === `edu-${edu.id}` ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3 w-3" />
+                    )}
+                    Mejorar con IA
+                  </Button>
+                </div>
+                <Textarea
+                  value={edu.description || ''}
+                  onChange={(e) => updateEducation(edu.id, 'description', e.target.value)}
+                  placeholder="Describe tu formación, logros académicos..."
+                  rows={3}
+                />
               </div>
             </div>
           ))}
