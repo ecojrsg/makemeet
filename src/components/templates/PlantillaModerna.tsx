@@ -16,21 +16,26 @@ const textoNivelIdioma: Record<string, string> = {
   native: 'Nativo'
 };
 
-export function PlantillaModerna({ datos, perfilGithub, reposGithub }: PlantillaProps) {
+export function PlantillaModerna({ datos, perfilGithub, reposGithub, mode = 'preview' }: PlantillaProps) {
   const { personalInfo, experiences, education, skills, languages } = datos;
   const { primary: color, light: colorClaro, gradient } = templateColors.moderno;
+
+  const esExportacion = mode === 'export';
 
   return (
     <div 
       id="styled-cv"
       style={{ 
-        width: '210mm', 
-        minHeight: '297mm', 
+        width: esExportacion ? '210mm' : '100%', 
+        minHeight: esExportacion ? '297mm' : '100%',
+        height: esExportacion ? 'auto' : '100%',
         fontSize: '11pt', 
         lineHeight: '1.4',
         backgroundColor: '#ffffff',
         color: '#111827',
-        fontFamily: 'system-ui, -apple-system, sans-serif'
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       {/* Encabezado */}
@@ -80,7 +85,7 @@ export function PlantillaModerna({ datos, perfilGithub, reposGithub }: Plantilla
         </div>
       </div>
 
-      <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px', flex: esExportacion ? 'none' : '1' }}>
         {/* Perfil */}
         {personalInfo.summary && (
           <section>

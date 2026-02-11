@@ -16,22 +16,27 @@ const textoNivelIdioma: Record<string, string> = {
   native: 'Nativo'
 };
 
-export function PlantillaMinimalista({ datos, perfilGithub, reposGithub }: PlantillaProps) {
+export function PlantillaMinimalista({ datos, perfilGithub, reposGithub, mode = 'preview' }: PlantillaProps) {
   const { personalInfo, experiences, education, skills, languages } = datos;
   const { primary: color, secondary: colorSecundario } = templateColors.minimalista;
+
+  const esExportacion = mode === 'export';
 
   return (
     <div 
       id="styled-cv"
       style={{ 
-        width: '210mm', 
-        minHeight: '297mm', 
+        width: esExportacion ? '210mm' : '100%', 
+        minHeight: esExportacion ? '297mm' : '100%',
+        height: esExportacion ? 'auto' : '100%',
         fontSize: '11pt', 
         lineHeight: '1.6',
         backgroundColor: '#ffffff',
         color: '#1f2937',
         fontFamily: '"Helvetica Neue", Arial, sans-serif',
-        padding: '48px'
+        padding: '48px',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       {/* Encabezado minimalista */}

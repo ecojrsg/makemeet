@@ -8,6 +8,7 @@ export interface PlantillaProps {
   datos: CVData;
   perfilGithub: GitHubProfile | null;
   reposGithub: GitHubRepo[];
+  mode?: 'preview' | 'export'; // preview: altura dinámica, export: dimensiones A4 fijas
 }
 
 // Información de cada plantilla para el selector

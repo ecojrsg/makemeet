@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ReactDOM from 'react-dom/client';
 import { CVData } from '@/types/cv';
 import { TipoPlantilla } from '@/types/templates';
 import { CVForm } from '@/components/CVForm';
@@ -69,16 +70,52 @@ const Index = () => {
 
   const handleExport = async (format: 'styled' | 'plain') => {
     const elementId = format === 'styled' ? 'styled-cv' : 'plain-cv';
-    const element = document.getElementById(elementId);
+    let element = document.getElementById(elementId);
     if (!element) {
       toast.error('Error al exportar el CV');
       return;
     }
+    
+    let tempContainer: HTMLDivElement | null = null;
+    let tempRoot: any = null;
+    
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
         import('html2canvas-pro'),
         import('jspdf')
       ]);
+
+      // Si es formato styled, crear una versión temporal con mode="export"
+      if (format === 'styled') {
+        tempContainer = document.createElement('div');
+        tempContainer.style.position = 'fixed';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '0';
+        tempContainer.style.width = '210mm';
+        tempContainer.style.zIndex = '-1000';
+        document.body.appendChild(tempContainer);
+
+        // Renderizar la plantilla con mode="export"
+        let plantillaComponent;
+        if (plantillaActual === 'moderno') {
+          plantillaComponent = <PlantillaModerna datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
+        } else if (plantillaActual === 'clasico') {
+          plantillaComponent = <PlantillaClasica datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
+        } else if (plantillaActual === 'minimalista') {
+          plantillaComponent = <PlantillaMinimalista datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
+        } else {
+          plantillaComponent = <PlantillaCreativa datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} mode="export" />;
+        }
+
+        tempRoot = ReactDOM.createRoot(tempContainer);
+        await new Promise<void>((resolve) => {
+          tempRoot.render(plantillaComponent);
+          // Esperar a que el renderizado se complete
+          setTimeout(resolve, 100);
+        });
+
+        element = tempContainer.querySelector('[id="styled-cv"]') as HTMLElement || tempContainer.firstChild as HTMLElement;
+      }
 
       // Clonar elemento fuera del contexto sticky para evitar
       // desalineación vertical en html2canvas
@@ -89,7 +126,7 @@ const Index = () => {
       container.style.position = 'fixed';
       container.style.left = '-9999px';
       container.style.top = '0';
-      container.style.width = `${element.scrollWidth}px`;
+      container.style.width = format === 'styled' ? '210mm' : `${element.scrollWidth}px`;
       container.style.zIndex = '-1000';
       container.style.overflow = 'visible';
       container.appendChild(clone);
@@ -102,10 +139,14 @@ const Index = () => {
         allowTaint: true,
         scrollX: 0,
         scrollY: 0,
-        windowWidth: element.scrollWidth,
+        windowWidth: format === 'styled' ? 794 : element.scrollWidth, // 210mm = ~794px
       });
 
       document.body.removeChild(container);
+      if (tempContainer && tempRoot) {
+        tempRoot.unmount();
+        document.body.removeChild(tempContainer);
+      }
 
       const imgData = canvas.toDataURL('image/jpeg', 1);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -153,6 +194,14 @@ const Index = () => {
       const leftover = document.querySelector('div[style*="left: -9999px"]');
       if (leftover?.parentNode === document.body) {
         document.body.removeChild(leftover);
+      }
+      if (tempContainer && tempRoot) {
+        try {
+          tempRoot.unmount();
+          if (document.body.contains(tempContainer)) {
+            document.body.removeChild(tempContainer);
+          }
+        } catch {}
       }
       toast.error('Error al exportar. Intenta de nuevo.');
     }
@@ -296,12 +345,13 @@ const Index = () => {
                   </div>
 
                   <TabsContent value="styled" className="mt-0">
-                    <div id="styled-cv" className="bg-white shadow-lg">
+                    <div id="styled-cv" className="bg-white shadow-lg min-h-[calc(100vh-250px)] flex flex-col">
                       {plantillaActual === 'moderno' && (
                         <PlantillaModerna
                           datos={cvData}
                           perfilGithub={githubProfile}
                           reposGithub={githubRepos}
+                          mode="preview"
                         />
                       )}
                       {plantillaActual === 'clasico' && (
@@ -309,6 +359,7 @@ const Index = () => {
                           datos={cvData}
                           perfilGithub={githubProfile}
                           reposGithub={githubRepos}
+                          mode="preview"
                         />
                       )}
                       {plantillaActual === 'minimalista' && (
@@ -316,6 +367,7 @@ const Index = () => {
                           datos={cvData}
                           perfilGithub={githubProfile}
                           reposGithub={githubRepos}
+                          mode="preview"
                         />
                       )}
                       {plantillaActual === 'creativo' && (
@@ -323,6 +375,7 @@ const Index = () => {
                           datos={cvData}
                           perfilGithub={githubProfile}
                           reposGithub={githubRepos}
+                          mode="preview"
                         />
                       )}
                     </div>
@@ -371,7 +424,7 @@ const Index = () => {
 
             {/* Preview - 8 columnas (66.67%) */}
             <div className="lg:col-span-8 space-y-4">
-              <div className="sticky top-24">
+              <div className="sticky top-24 min-h-[calc(100vh-8rem)]">
                 <Tabs value={activePreview} onValueChange={(v) => setActivePreview(v as 'styled' | 'plain')}>
                   <div className="flex items-center justify-between mb-4">
                     <TabsList>
@@ -403,12 +456,13 @@ const Index = () => {
                   </div>
 
                   <TabsContent value="styled" className="mt-0">
-                    <div id="styled-cv" className="bg-white shadow-lg">
+                    <div id="styled-cv" className="bg-white shadow-lg min-h-[calc(100vh-14rem)] flex flex-col">
                       {plantillaActual === 'moderno' && (
                         <PlantillaModerna
                           datos={cvData}
                           perfilGithub={githubProfile}
                           reposGithub={githubRepos}
+                          mode="preview"
                         />
                       )}
                       {plantillaActual === 'clasico' && (
@@ -416,6 +470,7 @@ const Index = () => {
                           datos={cvData}
                           perfilGithub={githubProfile}
                           reposGithub={githubRepos}
+                          mode="preview"
                         />
                       )}
                       {plantillaActual === 'minimalista' && (
@@ -423,6 +478,7 @@ const Index = () => {
                           datos={cvData}
                           perfilGithub={githubProfile}
                           reposGithub={githubRepos}
+                          mode="preview"
                         />
                       )}
                       {plantillaActual === 'creativo' && (
@@ -430,6 +486,7 @@ const Index = () => {
                           datos={cvData}
                           perfilGithub={githubProfile}
                           reposGithub={githubRepos}
+                          mode="preview"
                         />
                       )}
                     </div>

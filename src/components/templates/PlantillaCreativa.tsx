@@ -16,16 +16,19 @@ const textoNivelIdioma: Record<string, string> = {
   native: 'Nativo'
 };
 
-export function PlantillaCreativa({ datos, perfilGithub, reposGithub }: PlantillaProps) {
+export function PlantillaCreativa({ datos, perfilGithub, reposGithub, mode = 'preview' }: PlantillaProps) {
   const { personalInfo, experiences, education, skills, languages } = datos;
   const { primary: colorPrimario, light: colorSecundario, gradient } = templateColors.creativo;
+
+  const esExportacion = mode === 'export';
 
   return (
     <div 
       id="styled-cv"
       style={{ 
-        width: '210mm', 
-        minHeight: '297mm', 
+        width: esExportacion ? '210mm' : '100%', 
+        minHeight: esExportacion ? '297mm' : '100%',
+        height: esExportacion ? 'auto' : '100%',
         fontSize: '11pt', 
         lineHeight: '1.5',
         backgroundColor: '#ffffff',
@@ -119,7 +122,7 @@ export function PlantillaCreativa({ datos, perfilGithub, reposGithub }: Plantill
       </div>
 
       {/* Contenido principal */}
-      <div style={{ flex: 1, padding: '32px' }}>
+      <div style={{ flex: 1, padding: '32px', display: 'flex', flexDirection: 'column' }}>
         {/* Nombre y título */}
         <header style={{ marginBottom: '28px' }}>
           <h1 style={{ fontSize: '32px', fontWeight: '700', color: colorPrimario, marginBottom: '4px' }}>

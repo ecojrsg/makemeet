@@ -16,21 +16,26 @@ const textoNivelIdioma: Record<string, string> = {
   native: 'Nativo'
 };
 
-export function PlantillaClasica({ datos, perfilGithub, reposGithub }: PlantillaProps) {
+export function PlantillaClasica({ datos, perfilGithub, reposGithub, mode = 'preview' }: PlantillaProps) {
   const { personalInfo, experiences, education, skills, languages } = datos;
   const { primary: color, gradient } = templateColors.clasico;
+
+  const esExportacion = mode === 'export';
 
   return (
     <div 
       id="styled-cv"
       style={{ 
-        width: '210mm', 
-        minHeight: '297mm', 
+        width: esExportacion ? '210mm' : '100%', 
+        minHeight: esExportacion ? '297mm' : '100%',
+        height: esExportacion ? 'auto' : '100%',
         fontSize: '11pt', 
         lineHeight: '1.5',
         backgroundColor: '#ffffff',
         color: '#1f2937',
-        fontFamily: 'Georgia, "Times New Roman", serif'
+        fontFamily: 'Georgia, "Times New Roman", serif',
+        display: 'flex',
+        flexDirection: 'column'
       }}
     >
       {/* Encabezado clásico */}
@@ -76,7 +81,7 @@ export function PlantillaClasica({ datos, perfilGithub, reposGithub }: Plantilla
         </div>
       </div>
 
-      <div style={{ padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: '24px', flex: esExportacion ? 'none' : '1' }}>
         {/* Perfil */}
         {personalInfo.summary && (
           <section>
