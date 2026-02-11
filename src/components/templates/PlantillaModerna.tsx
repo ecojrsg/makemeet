@@ -1,4 +1,5 @@
 import { PlantillaProps } from '@/types/templates';
+import { templateColors } from '@/config/templateColors';
 import { Mail, Phone, MapPin, Linkedin, Github, Star, Users, BookOpen } from 'lucide-react';
 
 const formatearFecha = (fechaStr: string) => {
@@ -17,8 +18,7 @@ const textoNivelIdioma: Record<string, string> = {
 
 export function PlantillaModerna({ datos, perfilGithub, reposGithub }: PlantillaProps) {
   const { personalInfo, experiences, education, skills, languages } = datos;
-  const color = '#5b4cdb';
-  const colorClaro = '#ededfc';
+  const { primary: color, light: colorClaro, gradient } = templateColors.moderno;
 
   return (
     <div 
@@ -34,7 +34,7 @@ export function PlantillaModerna({ datos, perfilGithub, reposGithub }: Plantilla
       }}
     >
       {/* Encabezado */}
-      <div style={{ padding: '32px', backgroundColor: color }}>
+      <div style={{ padding: '32px', background: gradient }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
           {personalInfo.photo && (
             <img

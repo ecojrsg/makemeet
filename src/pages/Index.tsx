@@ -9,11 +9,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCVs, CVGuardado } from '@/hooks/useCVs';
 import { AuthDialog } from '@/components/auth/AuthDialog';
 import { SaveCVDialog } from '@/components/cv/SaveCVDialog';
-import { SidebarPanel } from '@/components/cv/SidebarPanel';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Download, Sparkles, Code, Github, Loader2, LogIn, LogOut, User, Save } from 'lucide-react';
+import { Download, Sparkles, Code, Save } from 'lucide-react';
 import { toast } from 'sonner';
+
 const initialCVData: CVData = {
   personalInfo: {
     fullName: '',
@@ -31,6 +34,7 @@ const initialCVData: CVData = {
   languages: [],
   githubUsername: ''
 };
+
 const Index = () => {
   const [cvData, setCvData] = useState<CVData>(initialCVData);
   const [activePreview, setActivePreview] = useState<'styled' | 'plain'>('styled');
@@ -40,18 +44,21 @@ const Index = () => {
   const [cvActualNombre, setCvActualNombre] = useState('');
   const [cvActualEtiquetas, setCvActualEtiquetas] = useState<string[]>([]);
   const [plantillaActual, setPlantillaActual] = useState<TipoPlantilla>('moderno');
+
   const {
     profile: githubProfile,
     repos: githubRepos,
     loading: githubLoading,
     error: githubError
   } = useGitHub(cvData.githubUsername);
+
   const {
     usuario,
     perfil,
     cargando: authCargando,
     cerrarSesion
   } = useAuth();
+
   const {
     cvs,
     cargando: cvsCargando,
@@ -59,6 +66,7 @@ const Index = () => {
     actualizarCV,
     eliminarCV
   } = useCVs();
+
   const handleExport = async (format: 'styled' | 'plain') => {
     const elementId = format === 'styled' ? 'styled-cv' : 'plain-cv';
     const element = document.getElementById(elementId);
@@ -149,6 +157,7 @@ const Index = () => {
       toast.error('Error al exportar. Intenta de nuevo.');
     }
   };
+
   const copyPlainText = () => {
     const element = document.getElementById('plain-cv');
     if (element) {
@@ -157,6 +166,7 @@ const Index = () => {
       toast.success('Texto copiado al portapapeles');
     }
   };
+
   const manejarNuevoCV = () => {
     setCvData(initialCVData);
     setCvActualId(null);
@@ -164,6 +174,7 @@ const Index = () => {
     setCvActualEtiquetas([]);
     toast.info('Nuevo CV creado');
   };
+
   const manejarSeleccionarCV = (cv: CVGuardado) => {
     setCvData(cv.datos_cv);
     setCvActualId(cv.id);
@@ -171,6 +182,7 @@ const Index = () => {
     setCvActualEtiquetas(cv.etiquetas);
     toast.success(`CV "${cv.nombre}" cargado`);
   };
+
   const manejarGuardarCV = async (nombre: string, etiquetas: string[]) => {
     if (cvActualId) {
       // Actualizar existente
@@ -187,6 +199,7 @@ const Index = () => {
       }
     }
   };
+
   const manejarEliminarCV = async (id: string) => {
     const confirmado = window.confirm('¿Estás seguro de eliminar este CV?');
     if (confirmado) {
@@ -196,125 +209,269 @@ const Index = () => {
       }
     }
   };
-  return <div className="min-h-screen bg-background">
-    {/* Header */}
-    <header className="border-b border-border bg-card sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary rounded-lg">
-              <FileText className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-foreground">MakeMeEt</h1>
-              <p className="text-sm text-muted-foreground">Crea tu currículum en segundos</p>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-4">
-            {cvData.githubUsername && <div className="hidden md:flex items-center gap-2 text-sm">
-              {githubLoading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : githubProfile ? <div className="flex items-center gap-2 text-primary">
-                <Github className="h-4 w-4" />
-                <span>@{githubProfile.login}</span>
-              </div> : githubError ? <span className="text-destructive text-xs">{githubError}</span> : null}
-            </div>}
+  return (
+    <SidebarProvider defaultOpen={false}>
+      <AppSidebar
+        usuario={!!usuario}
+        cvs={cvs}
+        cvsCargando={cvsCargando}
+        cvActualId={cvActualId ?? undefined}
+        plantillaActual={plantillaActual}
+        onNuevoCV={manejarNuevoCV}
+        onSeleccionarCV={manejarSeleccionarCV}
+        onEliminarCV={manejarEliminarCV}
+        onCambiarPlantilla={setPlantillaActual}
+      />
 
-            {authCargando ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : usuario ? <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
-                <User className="h-4 w-4" />
-                <span>{perfil?.nombre || usuario.email}</span>
-              </div>
-              <Button variant="outline" size="sm" onClick={cerrarSesion}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Salir
-              </Button>
-            </div> : <Button size="sm" onClick={() => setAuthDialogAbierto(true)}>
-              <LogIn className="h-4 w-4 mr-2" />
-              Iniciar sesión
-            </Button>}
-          </div>
-        </div>
-      </div>
-    </header>
+      <SidebarInset>
+        <PageHeader
+          usuario={usuario}
+          perfil={perfil}
+          githubProfile={githubProfile}
+          githubLoading={githubLoading}
+          onLogout={cerrarSesion}
+          onOpenAuth={() => setAuthDialogAbierto(true)}
+        />
 
-    <main className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        {/* Sidebar izquierdo - CVs guardados + Selector de plantillas */}
-        <div className="xl:col-span-3 order-1 xl:order-none">
-          <SidebarPanel usuario={!!usuario} cvs={cvs} cvsCargando={cvsCargando} cvActualId={cvActualId ?? undefined} plantillaActual={plantillaActual} onNuevoCV={manejarNuevoCV} onSeleccionarCV={manejarSeleccionarCV} onEliminarCV={manejarEliminarCV} onCambiarPlantilla={setPlantillaActual} />
-        </div>
+        <main className="container mx-auto px-4 py-8">
+          {/* MOBILE: Tabs para Formulario/Preview */}
+          <div className="lg:hidden">
+            <Tabs defaultValue="form" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="form">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Formulario
+                </TabsTrigger>
+                <TabsTrigger value="preview">
+                  <Code className="h-4 w-4 mr-2" />
+                  Vista Previa
+                </TabsTrigger>
+              </TabsList>
 
-        {/* Form Section */}
-        <div className="space-y-4 xl:col-span-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">
-                {cvActualId ? cvActualNombre : 'Nuevo CV'}
-              </h2>
-            </div>
-            {usuario && <Button variant="outline" size="sm" onClick={() => setSaveDialogAbierto(true)}>
-              <Save className="h-4 w-4 mr-2" />
-              {cvActualId ? 'Actualizar' : 'Guardar'}
-            </Button>}
-          </div>
-          <CVForm data={cvData} onChange={setCvData} />
-        </div>
-
-        {/* Preview Section */}
-        <div className="space-y-4 xl:col-span-4">
-          <div className="sticky top-24">
-            <Tabs value={activePreview} onValueChange={v => setActivePreview(v as 'styled' | 'plain')}>
-              <div className="flex items-center justify-between mb-4">
-                <TabsList>
-                  <TabsTrigger value="styled" className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    <span className="hidden sm:inline">Profesional</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="plain" className="flex items-center gap-2">
-                    <Code className="h-4 w-4" />
-                    <span className="hidden sm:inline">Texto IA</span>
-                  </TabsTrigger>
-                </TabsList>
-
-                <div className="flex gap-2">
-                  {activePreview === 'plain' && <Button variant="outline" size="sm" onClick={copyPlainText}>
-                    Copiar
-                  </Button>}
-                  <Button size="sm" onClick={() => handleExport(activePreview)} className="flex items-center gap-2">
-                    <Download className="h-4 w-4" />
-                    <span className="hidden sm:inline">Exportar</span>
-                  </Button>
+              <TabsContent value="form" className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">
+                    {cvActualId ? cvActualNombre : 'Nuevo CV'}
+                  </h2>
+                  {usuario && (
+                    <Button variant="outline" size="sm" onClick={() => setSaveDialogAbierto(true)}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {cvActualId ? 'Actualizar' : 'Guardar'}
+                    </Button>
+                  )}
                 </div>
-              </div>
-
-              <TabsContent value="styled" className="m-0">
-                {plantillaActual === 'moderno' && <PlantillaModerna datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} />}
-                {plantillaActual === 'clasico' && <PlantillaClasica datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} />}
-                {plantillaActual === 'minimalista' && <PlantillaMinimalista datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} />}
-                {plantillaActual === 'creativo' && <PlantillaCreativa datos={cvData} perfilGithub={githubProfile} reposGithub={githubRepos} />}
+                <CVForm data={cvData} onChange={setCvData} />
               </TabsContent>
-              <TabsContent value="plain" className="m-0">
-                <div className="overflow-auto scrollbar-hidden bg-muted/30 border border-border rounded-lg" style={{
-                  maxHeight: 'calc(100vh - 200px)'
-                }}>
-                  <PlainTextCVPreview data={cvData} githubProfile={githubProfile} githubRepos={githubRepos} />
-                </div>
+
+              <TabsContent value="preview" className="space-y-4">
+                <Tabs value={activePreview} onValueChange={(v) => setActivePreview(v as 'styled' | 'plain')}>
+                  <div className="flex items-center justify-between mb-4">
+                    <TabsList>
+                      <TabsTrigger value="styled" className="gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        Profesional
+                      </TabsTrigger>
+                      <TabsTrigger value="plain" className="gap-2">
+                        <Code className="h-4 w-4" />
+                        Texto IA
+                      </TabsTrigger>
+                    </TabsList>
+                    <div className="flex gap-2">
+                      {activePreview === 'plain' && (
+                        <Button variant="outline" size="sm" onClick={copyPlainText}>
+                          Copiar
+                        </Button>
+                      )}
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleExport(activePreview)}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Exportar
+                      </Button>
+                    </div>
+                  </div>
+
+                  <TabsContent value="styled" className="mt-0">
+                    <div id="styled-cv" className="bg-white shadow-lg">
+                      {plantillaActual === 'moderno' && (
+                        <PlantillaModerna
+                          datos={cvData}
+                          perfilGithub={githubProfile}
+                          reposGithub={githubRepos}
+                        />
+                      )}
+                      {plantillaActual === 'clasico' && (
+                        <PlantillaClasica
+                          datos={cvData}
+                          perfilGithub={githubProfile}
+                          reposGithub={githubRepos}
+                        />
+                      )}
+                      {plantillaActual === 'minimalista' && (
+                        <PlantillaMinimalista
+                          datos={cvData}
+                          perfilGithub={githubProfile}
+                          reposGithub={githubRepos}
+                        />
+                      )}
+                      {plantillaActual === 'creativo' && (
+                        <PlantillaCreativa
+                          datos={cvData}
+                          perfilGithub={githubProfile}
+                          reposGithub={githubRepos}
+                        />
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="plain" className="mt-0">
+                    <div id="plain-cv" className="overflow-auto scrollbar-hidden bg-muted/30 border border-border rounded-lg" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                      <PlainTextCVPreview
+                        data={cvData}
+                        githubProfile={githubProfile}
+                        githubRepos={githubRepos}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                {activePreview === 'plain' && (
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    Optimizado para sistemas ATS y modelos de IA
+                  </p>
+                )}
               </TabsContent>
             </Tabs>
-
-            {activePreview === 'plain' && <p className="text-xs text-muted-foreground mt-3 text-center">
-              Optimizado para sistemas ATS y modelos de IA
-            </p>}
           </div>
-        </div>
-      </div>
-    </main>
 
-    {/* Dialogs */}
-    <AuthDialog abierto={authDialogAbierto} onCerrar={() => setAuthDialogAbierto(false)} />
+          {/* DESKTOP: Grid lado a lado */}
+          <div className="hidden lg:grid lg:grid-cols-12 gap-6">
+            {/* Formulario - 4 columnas (33.33%) */}
+            <div className="lg:col-span-4 space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold">
+                    {cvActualId ? cvActualNombre : 'Nuevo CV'}
+                  </h2>
+                </div>
+                {usuario && (
+                  <Button variant="outline" size="sm" onClick={() => setSaveDialogAbierto(true)}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {cvActualId ? 'Actualizar' : 'Guardar'}
+                  </Button>
+                )}
+              </div>
+              <CVForm data={cvData} onChange={setCvData} />
+            </div>
 
-    <SaveCVDialog abierto={saveDialogAbierto} onCerrar={() => setSaveDialogAbierto(false)} onGuardar={manejarGuardarCV} nombreInicial={cvActualNombre} etiquetasIniciales={cvActualEtiquetas} modoEdicion={!!cvActualId} />
-  </div>;
+            {/* Preview - 8 columnas (66.67%) */}
+            <div className="lg:col-span-8 space-y-4">
+              <div className="sticky top-24">
+                <Tabs value={activePreview} onValueChange={(v) => setActivePreview(v as 'styled' | 'plain')}>
+                  <div className="flex items-center justify-between mb-4">
+                    <TabsList>
+                      <TabsTrigger value="styled" className="gap-2">
+                        <Sparkles className="h-4 w-4" />
+                        Profesional
+                      </TabsTrigger>
+                      <TabsTrigger value="plain" className="gap-2">
+                        <Code className="h-4 w-4" />
+                        Texto IA
+                      </TabsTrigger>
+                    </TabsList>
+                    <div className="flex gap-2">
+                      {activePreview === 'plain' && (
+                        <Button variant="outline" size="sm" onClick={copyPlainText}>
+                          Copiar
+                        </Button>
+                      )}
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleExport(activePreview)}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Exportar PDF
+                      </Button>
+                    </div>
+                  </div>
+
+                  <TabsContent value="styled" className="mt-0">
+                    <div id="styled-cv" className="bg-white shadow-lg">
+                      {plantillaActual === 'moderno' && (
+                        <PlantillaModerna
+                          datos={cvData}
+                          perfilGithub={githubProfile}
+                          reposGithub={githubRepos}
+                        />
+                      )}
+                      {plantillaActual === 'clasico' && (
+                        <PlantillaClasica
+                          datos={cvData}
+                          perfilGithub={githubProfile}
+                          reposGithub={githubRepos}
+                        />
+                      )}
+                      {plantillaActual === 'minimalista' && (
+                        <PlantillaMinimalista
+                          datos={cvData}
+                          perfilGithub={githubProfile}
+                          reposGithub={githubRepos}
+                        />
+                      )}
+                      {plantillaActual === 'creativo' && (
+                        <PlantillaCreativa
+                          datos={cvData}
+                          perfilGithub={githubProfile}
+                          reposGithub={githubRepos}
+                        />
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="plain" className="mt-0">
+                    <div id="plain-cv" className="overflow-auto scrollbar-hidden bg-muted/30 border border-border rounded-lg" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                      <PlainTextCVPreview
+                        data={cvData}
+                        githubProfile={githubProfile}
+                        githubRepos={githubRepos}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                {activePreview === 'plain' && (
+                  <p className="text-xs text-muted-foreground mt-3 text-center">
+                    Optimizado para sistemas ATS y modelos de IA
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Dialogs */}
+        <AuthDialog
+          abierto={authDialogAbierto}
+          onCerrar={() => setAuthDialogAbierto(false)}
+        />
+        <SaveCVDialog
+          abierto={saveDialogAbierto}
+          onCerrar={() => setSaveDialogAbierto(false)}
+          onGuardar={manejarGuardarCV}
+          nombreInicial={cvActualNombre}
+          etiquetasIniciales={cvActualEtiquetas}
+          modoEdicion={!!cvActualId}
+        />
+      </SidebarInset>
+    </SidebarProvider>
+  );
 };
+
 export default Index;

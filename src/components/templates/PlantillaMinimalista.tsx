@@ -1,4 +1,5 @@
 import { PlantillaProps } from '@/types/templates';
+import { templateColors } from '@/config/templateColors';
 import { Mail, Phone, MapPin, Linkedin, Github, Star, Users, BookOpen } from 'lucide-react';
 
 const formatearFecha = (fechaStr: string) => {
@@ -17,6 +18,7 @@ const textoNivelIdioma: Record<string, string> = {
 
 export function PlantillaMinimalista({ datos, perfilGithub, reposGithub }: PlantillaProps) {
   const { personalInfo, experiences, education, skills, languages } = datos;
+  const { primary: color, secondary: colorSecundario } = templateColors.minimalista;
 
   return (
     <div 

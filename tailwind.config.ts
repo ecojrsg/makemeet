@@ -56,7 +56,21 @@ export default {
   				'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
-  			}
+  			},
+  			brand: {
+  				ocean: 'hsl(203 54% 27%)',
+  				'ocean-light': 'hsl(203 54% 37%)',
+  				'ocean-dark': 'hsl(203 54% 20%)',
+  				teal: 'hsl(170 54% 40%)',
+  				'teal-light': 'hsl(170 54% 50%)',
+  				'teal-dark': 'hsl(170 54% 30%)',
+  				mint: 'hsl(162 63% 48%)',
+  				sky: 'hsl(199 89% 48%)',
+  				coral: 'hsl(0 72% 58%)'
+  			},
+  			success: 'hsl(var(--success))',
+  			warning: 'hsl(var(--warning))',
+  			info: 'hsl(var(--info))'
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -83,7 +97,9 @@ export default {
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'fade-in': 'fadeIn 0.3s ease-in',
+  			'slide-up': 'slideUp 0.4s ease-out'
   		},
   		boxShadow: {
   			'2xs': 'var(--shadow-2xs)',
@@ -92,7 +108,14 @@ export default {
   			md: 'var(--shadow-md)',
   			lg: 'var(--shadow-lg)',
   			xl: 'var(--shadow-xl)',
-  			'2xl': 'var(--shadow-2xl)'
+  			'2xl': 'var(--shadow-2xl)',
+  			'brand-sm': 'var(--shadow-brand-sm)',
+  			'brand-md': 'var(--shadow-brand-md)',
+  			'brand-lg': 'var(--shadow-brand-lg)'
+  		},
+  		backgroundImage: {
+  			'gradient-brand': 'var(--gradient-brand)',
+  			'gradient-brand-subtle': 'var(--gradient-brand-subtle)'
   		},
   		fontFamily: {
   			sans: [

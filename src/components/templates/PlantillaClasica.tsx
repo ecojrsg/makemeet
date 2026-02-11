@@ -1,4 +1,5 @@
 import { PlantillaProps } from '@/types/templates';
+import { templateColors } from '@/config/templateColors';
 import { Mail, Phone, MapPin, Linkedin, Github, Star, Users, BookOpen } from 'lucide-react';
 
 const formatearFecha = (fechaStr: string) => {
@@ -17,7 +18,7 @@ const textoNivelIdioma: Record<string, string> = {
 
 export function PlantillaClasica({ datos, perfilGithub, reposGithub }: PlantillaProps) {
   const { personalInfo, experiences, education, skills, languages } = datos;
-  const color = '#1e3a5f';
+  const { primary: color, gradient } = templateColors.clasico;
 
   return (
     <div 

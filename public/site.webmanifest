@@ -1,0 +1,23 @@
+{
+  "name": "MakeMeEt",
+  "short_name": "MakeMeEt",
+  "description": "Creador de currículums profesional",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafa",
+  "theme_color": "#1e4d6b",
+  "icons": [
+    {
+      "src": "/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
