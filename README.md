@@ -12,23 +12,31 @@ persistencia en la nube. Diseñada para ser fácil de usar, segura y
 ## ✨ Características principales
 
 -   🎨 **4 plantillas profesionales**
-    -   Clásica\
-    -   Moderna\
-    -   Minimalista\
+    -   Clásica
+    -   Moderna
+    -   Minimalista
     -   Creativa
 -   🔐 **Autenticación robusta**
-    -   Email y contraseña\
+    -   Email y contraseña
     -   OAuth (Google)
 -   ☁️ **Persistencia en la nube con Supabase**
-    -   Almacenamiento multi-CV por usuario\
-    -   Seguridad con Row Level Security (RLS)\
+    -   Almacenamiento multi-CV por usuario
+    -   Seguridad con Row Level Security (RLS)
     -   Gestión automática de perfiles
 -   🐙 **Integración con GitHub**
-    -   Importación automática de biografía\
+    -   Importación automática de biografía
     -   Listado de repositorios destacados
+-   🤖 **Mejora de textos con IA**
+    -   Integración con OpenAI y Google Gemini
+    -   API keys personales por usuario
+    -   Sistema de logs de peticiones
 -   📄 **Exportación a PDF**
-    -   Listo para procesos de reclutamiento\
+    -   Listo para procesos de reclutamiento
     -   Formato profesional y limpio
+-   ⚙️ **Página de configuración accesible**
+    -   Botón Setup en el sidebar
+    -   Verificación de conexión con Supabase
+    -   Gestión de API keys personales
 -   🐳 **Auto-hospedable**
     -   Arquitectura lista para Docker y Docker Compose
 
@@ -36,14 +44,14 @@ persistencia en la nube. Diseñada para ser fácil de usar, segura y
 
 ## 🛠️ Stack tecnológico
 
-  Capa          Tecnología
-  ------------- --------------------------------------
-  Frontend      React 18 + TypeScript + Vite
-  Estilos       Tailwind CSS + shadcn/ui
-  Backend       Supabase (Auth, PostgreSQL, Storage)
-  Estado        TanStack Query (React Query)
-  Formularios   React Hook Form + Zod
-  Despliegue    Docker + Docker Compose
+| Capa         | Tecnología                           |
+|--------------|--------------------------------------|
+| Frontend     | React 18 + TypeScript + Vite (SWC)  |
+| Estilos      | Tailwind CSS + shadcn/ui             |
+| Backend      | Supabase (Auth, PostgreSQL)          |
+| Estado       | TanStack Query (React Query)         |
+| Formularios  | React Hook Form + Zod                |
+| Despliegue   | Docker + Docker Compose              |
 
 ------------------------------------------------------------------------
 
@@ -51,8 +59,8 @@ persistencia en la nube. Diseñada para ser fácil de usar, segura y
 
 ### 📋 Requisitos previos
 
--   Node.js **18+** o Bun\
--   Docker y Docker Compose\
+-   Node.js **18+** o Bun
+-   Docker y Docker Compose (para despliegue en producción)
 -   Una instancia de Supabase (Cloud o Self-hosted)
 
 ------------------------------------------------------------------------
@@ -63,7 +71,7 @@ Clona el repositorio y prepara las variables de entorno:
 
 ``` bash
 git clone <URL_DEL_REPO>
-cd cv-generator
+cd makemeet
 cp .env.example .env
 ```
 
@@ -74,8 +82,10 @@ APP_PORT=8080
 VITE_SUPABASE_URL="https://tu-proyecto.supabase.co"
 VITE_SUPABASE_PUBLISHABLE_KEY="tu-anon-key"
 VITE_SUPABASE_PROJECT_ID="tu-project-id"
-VITE_AUTH_PROVIDERS=email,google,github
+VITE_AUTH_PROVIDERS=email,google
 ```
+
+> **Nota**: Todas las variables con prefijo `VITE_` se inyectan durante el build y son públicas en el navegador. Nunca expongas claves privadas aquí.
 
 ------------------------------------------------------------------------
 
@@ -92,313 +102,66 @@ La aplicación estará disponible en:
 
 ------------------------------------------------------------------------
 
-### 🐳 Despliegue con Docker (recomendado)
-Importante: Cada vez que se modifique el archivo de entorno (.env) o se requiera reiniciar el servicio con cambios, es necesario reconstruir la imagen de Docker para que los cambios se inyecten correctamente durante el proceso de build.
+### 🐳 Despliegue con Docker
+
+#### Despliegue rápido
 
 ``` bash
 docker-compose up -d
 ```
 
-O manualmente:
+#### Rebuild completo (necesario tras cambios en .env)
 
 ``` bash
-docker build -t cv-generator .
-docker run -p 8080:80 cv-generator
+docker-compose build --no-cache && docker-compose up -d
 ```
+
+> **Importante**: Cada vez que modifiques el archivo `.env`, debes reconstruir la imagen de Docker para que los cambios se inyecten correctamente durante el proceso de build.
+
+Para más detalles sobre la configuración de Docker, consulta el archivo `docker-compose.yml` y `Dockerfile` en el repositorio.
 
 ------------------------------------------------------------------------
 
-## 🤖 Sistema de API Keys de IA (Opcional)
+## ⚙️ Configuración inicial de la aplicación
 
-MakeMeEt incluye funcionalidades de IA para mejorar textos de CV usando OpenAI o Google Gemini. El sistema soporta:
+### Acceso a la página de Setup
 
-- **API Keys Personales**: Cada usuario puede configurar su propia key (almacenada en localStorage)
-- **API Keys Globales**: Los administradores pueden configurar keys compartidas para todos los usuarios
+Una vez que la aplicación esté en ejecución, puedes acceder a la configuración desde:
 
-### 📋 Requisitos para IA
+-   El botón **"Setup"** (⚙️) en el pie del sidebar (siempre visible)
+-   La ruta directa: `http://localhost:8080/setup`
 
-1. **Supabase CLI** instalado (para desplegar Edge Functions)
-2. Una cuenta de **OpenAI** o **Google Gemini** con API key
-3. Acceso de administrador en la aplicación
+### ¿Qué puedes hacer en Setup?
 
-### 🔧 Configuración de Edge Functions
+1. **Verificar la conexión con Supabase**
+   - Comprueba que las credenciales en `.env` sean correctas
+   - Verifica el estado de las tablas de la base de datos
 
-Las Edge Functions permiten que usuarios sin API key personal usen la key global del administrador de forma segura (la key nunca llega al navegador).
+2. **Configurar la base de datos inicial**
+   - Copia el SQL de configuración con un clic
+   - Accede directamente al SQL Editor de Supabase
+   - Ejecuta el script para crear las tablas necesarias
 
-#### 1. Instalar Supabase CLI
-
-```bash
-# macOS/Linux
-brew install supabase/tap/supabase
-
-# Windows (con Scoop)
-scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
-scoop install supabase
-
-# O con npm
-npm install -g supabase
-```
-
-#### 2. Iniciar sesión en Supabase
-
-```bash
-supabase login
-```
-
-#### 3. Vincular tu proyecto
-
-```bash
-supabase link --project-ref tu-project-id
-```
-
-#### 4. Crear la estructura de Edge Functions
-
-```bash
-# Crear directorio para las funciones
-mkdir -p supabase/functions/improve-cv-text
-mkdir -p supabase/functions/_shared
-
-# Crear archivo de la función principal
-cat > supabase/functions/improve-cv-text/index.ts << 'EOF'
-import { corsHeaders } from '../_shared/cors.ts';
-import { handleOpenAI } from './openai-handler.ts';
-import { handleGemini } from './gemini-handler.ts';
-
-Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  try {
-    // Verificar autenticación
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'No autorizado' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Obtener API key activa desde la base de datos
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.39.3');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Llamar a la función que obtiene la key activa
-    const { data: keyData, error: keyError } = await supabase.rpc('obtener_api_key_activa');
-
-    if (keyError || !keyData) {
-      console.error('[Edge Function] Error al obtener API key:', keyError);
-      return new Response(
-        JSON.stringify({ error: 'No hay API key global configurada' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { proveedor, clave, modelo } = keyData;
-
-    // Obtener el prompt del body
-    const { systemPrompt, userPrompt } = await req.json();
-
-    // Delegar al handler correcto
-    if (proveedor === 'openai') {
-      return await handleOpenAI(clave, modelo, systemPrompt, userPrompt);
-    } else if (proveedor === 'gemini') {
-      return await handleGemini(clave, modelo, systemPrompt, userPrompt);
-    } else {
-      return new Response(
-        JSON.stringify({ error: 'Proveedor no soportado' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-  } catch (error) {
-    console.error('[Edge Function] Error:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-});
-EOF
-
-# Crear handler para OpenAI
-cat > supabase/functions/improve-cv-text/openai-handler.ts << 'EOF'
-import { corsHeaders } from '../_shared/cors.ts';
-
-export async function handleOpenAI(
-  apiKey: string,
-  modelo: string,
-  systemPrompt: string,
-  userPrompt: string
-): Promise<Response> {
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: modelo,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        max_tokens: 500,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      
-      // Si es 402 o error de quota, devolver mensaje específico
-      if (response.status === 401 || response.status === 403) {
-        const detail = errorData?.error?.message || '';
-        if (detail.includes('quota') || detail.includes('billing')) {
-          return new Response(
-            JSON.stringify({ error: 'API key sin créditos o cuenta suspendida' }),
-            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ error: `Error de OpenAI: ${response.status}` }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const data = await response.json();
-    const text = data.choices?.[0]?.message?.content?.trim();
-
-    if (!text) {
-      return new Response(
-        JSON.stringify({ error: 'OpenAI no generó respuesta' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ text }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-EOF
-
-# Crear handler para Gemini
-cat > supabase/functions/improve-cv-text/gemini-handler.ts << 'EOF'
-import { corsHeaders } from '../_shared/cors.ts';
-
-export async function handleGemini(
-  apiKey: string,
-  modelo: string,
-  systemPrompt: string,
-  userPrompt: string
-): Promise<Response> {
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: userPrompt }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: {
-          maxOutputTokens: 500,
-          temperature: 0.7,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      
-      if (response.status === 400) {
-        const msg = errorData?.error?.message || '';
-        if (msg.toLowerCase().includes('quota')) {
-          return new Response(
-            JSON.stringify({ error: 'API key sin créditos' }),
-            { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ error: `Error de Gemini: ${response.status}` }),
-        { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-    if (!text) {
-      return new Response(
-        JSON.stringify({ error: 'Gemini no generó respuesta' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ text }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  }
-}
-EOF
-
-# Crear archivo CORS compartido
-cat > supabase/functions/_shared/cors.ts << 'EOF'
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-EOF
-```
-
-#### 5. Desplegar la Edge Function
-
-```bash
-supabase functions deploy improve-cv-text
-```
-
-#### 6. Verificar el despliegue
-
-```bash
-supabase functions list
-```
-
-### 📝 Notas importantes
-
-- Las Edge Functions son **gratuitas** en Supabase (hasta 500K invocaciones/mes)
-- La API key global **nunca** llega al navegador del cliente
-- Los usuarios con API key personal **siempre** usan su propia key (llamada directa, sin Edge Function)
-- Solo puede haber **una API key global activa** a la vez
-- Los administradores gestionan las API keys globales desde la página de Setup
+3. **Gestionar tus API keys de IA**
+   - Agrega API keys de OpenAI o Google Gemini
+   - Elige si guardarlas de forma temporal o permanente
+   - Activa/desactiva keys según necesites
 
 ------------------------------------------------------------------------
 
-## 🗄️ Esquema de base de datos (PostgreSQL)
+## 🗄️ Esquema de base de datos
 
-Ejecuta el siguiente script en el **SQL Editor de Supabase**:
+### Configuración automática desde la aplicación (Recomendado)
+
+1. Accede al botón **"Setup"** en el sidebar
+2. Haz clic en **"Copiar SQL"**
+3. Haz clic en **"Abrir SQL Editor"** (te llevará a Supabase)
+4. Pega el SQL copiado en el editor
+5. Ejecuta el script
+
+### Configuración manual en Supabase
+
+Si prefieres configurar manualmente, ejecuta el siguiente script SQL en el **SQL Editor de Supabase**:
 
 ``` sql
 -- ============================================
@@ -408,10 +171,9 @@ Ejecuta el siguiente script en el **SQL Editor de Supabase**:
 -- Tabla de perfiles de usuario
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL UNIQUE,
   nombre TEXT,
   avatar_url TEXT,
-  is_admin BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -427,26 +189,66 @@ CREATE TABLE IF NOT EXISTS public.cvs (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Tabla de API Keys para IA (opcional)
+-- Tabla de API Keys personales de usuarios
 CREATE TABLE IF NOT EXISTS public.api_keys (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   nombre TEXT NOT NULL,
   proveedor TEXT NOT NULL CHECK (proveedor IN ('openai', 'gemini')),
   clave TEXT NOT NULL,
   modelo TEXT NOT NULL,
   activa BOOLEAN NOT NULL DEFAULT false,
-  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+-- Índice único: solo UNA key activa por usuario
+CREATE UNIQUE INDEX IF NOT EXISTS unique_active_key_per_user 
+  ON public.api_keys(user_id) 
+  WHERE activa = true;
+
+-- Tabla de logs de peticiones a IA
+CREATE TABLE IF NOT EXISTS public.ai_request_logs (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  
+  -- Información de la API key usada
+  api_key_id UUID REFERENCES public.api_keys(id) ON DELETE SET NULL,
+  api_key_nombre TEXT NOT NULL,
+  proveedor TEXT NOT NULL CHECK (proveedor IN ('openai', 'gemini')),
+  modelo TEXT NOT NULL,
+  
+  -- Datos de la petición
+  contexto TEXT NOT NULL CHECK (contexto IN ('resumen', 'experiencia', 'educacion')),
+  info_adicional TEXT,
+  prompt TEXT NOT NULL,
+  
+  -- Datos de la respuesta
+  respuesta TEXT NOT NULL,
+  
+  -- Métricas de rendimiento
+  tiempo_respuesta_ms INTEGER,
+  intentos INTEGER DEFAULT 1,
+  error_mensaje TEXT,
+  
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Índices para consultas eficientes
+CREATE INDEX IF NOT EXISTS idx_ai_logs_user_id ON public.ai_request_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_logs_created_at ON public.ai_request_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_logs_user_created ON public.ai_request_logs(user_id, created_at DESC);
 
 -- ============================================
 -- SEGURIDAD (RLS)
 -- ============================================
 
+-- Habilitar RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cvs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_request_logs ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para profiles
 CREATE POLICY "Usuarios pueden ver su propio perfil" 
@@ -482,42 +284,37 @@ CREATE POLICY "Usuarios pueden eliminar sus propios CVs"
 ON public.cvs FOR DELETE 
 USING (auth.uid() = user_id);
 
--- Políticas para api_keys (solo admins pueden SELECT, INSERT, UPDATE, DELETE)
-CREATE POLICY "Solo admins pueden ver API keys globales"
+-- Políticas para api_keys (cada usuario solo ve/maneja sus propias keys)
+CREATE POLICY "Usuarios pueden ver sus propias API keys"
 ON public.api_keys FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.user_id = auth.uid() AND profiles.is_admin = true
-  )
-);
+TO authenticated
+USING (auth.uid() = user_id);
 
-CREATE POLICY "Solo admins pueden crear API keys globales"
+CREATE POLICY "Usuarios pueden insertar sus propias API keys"
 ON public.api_keys FOR INSERT
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.user_id = auth.uid() AND profiles.is_admin = true
-  )
-);
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Solo admins pueden actualizar API keys globales"
+CREATE POLICY "Usuarios pueden actualizar sus propias API keys"
 ON public.api_keys FOR UPDATE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.user_id = auth.uid() AND profiles.is_admin = true
-  )
-);
+TO authenticated
+USING (auth.uid() = user_id);
 
-CREATE POLICY "Solo admins pueden eliminar API keys globales"
+CREATE POLICY "Usuarios pueden eliminar sus propias API keys"
 ON public.api_keys FOR DELETE
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.user_id = auth.uid() AND profiles.is_admin = true
-  )
-);
+TO authenticated
+USING (auth.uid() = user_id);
+
+-- Políticas para ai_request_logs
+CREATE POLICY "Usuarios pueden ver sus propios logs"
+ON public.ai_request_logs FOR SELECT
+TO authenticated
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Usuarios pueden insertar sus propios logs"
+ON public.ai_request_logs FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
 
 -- ============================================
 -- FUNCIONES Y TRIGGERS
@@ -532,7 +329,10 @@ SET search_path TO 'public'
 AS $$
 BEGIN
   INSERT INTO public.profiles (user_id, nombre)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email));
+  VALUES (
+    NEW.id, 
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email)
+  );
   RETURN NEW;
 END;
 $$;
@@ -571,75 +371,259 @@ CREATE TRIGGER update_api_keys_updated_at
   BEFORE UPDATE ON public.api_keys
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_updated_at();
 
--- Función para obtener API key activa (usada por Edge Functions)
--- Usa SECURITY DEFINER para que las Edge Functions puedan acceder
-CREATE OR REPLACE FUNCTION public.obtener_api_key_activa()
-RETURNS TABLE (
-  proveedor TEXT,
-  clave TEXT,
-  modelo TEXT
-)
+-- Función para limpiar logs antiguos (mantener solo últimos N por usuario)
+CREATE OR REPLACE FUNCTION public.limpiar_logs_antiguos_por_usuario()
+RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
+DECLARE
+  limite_logs INTEGER := 500; -- Mantener solo últimos 500 logs por usuario
 BEGIN
-  RETURN QUERY
-  SELECT api_keys.proveedor, api_keys.clave, api_keys.modelo
-  FROM public.api_keys
-  WHERE api_keys.activa = true
-  LIMIT 1;
+  DELETE FROM public.ai_request_logs
+  WHERE id IN (
+    SELECT id FROM public.ai_request_logs
+    WHERE user_id = NEW.user_id
+    ORDER BY created_at DESC
+    OFFSET limite_logs
+  );
+  RETURN NEW;
 END;
 $$;
+
+-- Trigger para ejecutar limpieza después de cada inserción
+DROP TRIGGER IF EXISTS trigger_limpiar_logs ON public.ai_request_logs;
+CREATE TRIGGER trigger_limpiar_logs
+  AFTER INSERT ON public.ai_request_logs
+  FOR EACH ROW EXECUTE FUNCTION public.limpiar_logs_antiguos_por_usuario();
 ```
 
-### 🔑 Hacer tu primer usuario administrador
+### 📝 Notas sobre el esquema
 
-Después de registrarte en la aplicación, ejecuta este SQL en Supabase para convertirte en admin:
-
-```sql
--- Reemplaza 'tu@email.com' con el email que usaste al registrarte
-UPDATE public.profiles
-SET is_admin = true
-WHERE user_id = (
-  SELECT id FROM auth.users WHERE email = 'tu@email.com'
-);
-```
-
-Una vez que seas admin, podrás:
-- Configurar API Keys globales de IA
-- Gestionar configuraciones avanzadas desde el Setup
-- Ver todas las opciones de administración
+- **Row Level Security (RLS)**: Todas las tablas tienen RLS habilitado. Cada usuario solo puede acceder a sus propios datos.
+- **API Keys personales**: Cada usuario gestiona sus propias keys. No existen keys globales ni roles de administrador.
+- **Logs de IA**: El sistema mantiene automáticamente solo los últimos 500 logs por usuario para optimizar el almacenamiento.
+- **Índice único**: Solo puede haber una API key activa por usuario a la vez.
 
 ------------------------------------------------------------------------
 
-## 🔧 Mantenimiento y logs
+## 🤖 Sistema de API Keys de IA (Opcional)
 
-Si usas Docker:
+MakeMeEt incluye funcionalidades de IA para mejorar textos de CV usando **OpenAI** o **Google Gemini**. Cada usuario gestiona sus propias API keys de forma completamente independiente y segura.
+
+### 🔑 Tipos de API Keys
+
+#### 1. Temporales (sessionStorage)
+-   Se guardan solo durante la sesión del navegador
+-   Ideales para pruebas rápidas o uso esporádico
+-   **Se pierden al cerrar el navegador**
+-   No se almacenan en Supabase
+
+#### 2. Persistentes (Supabase)
+-   Se guardan en tu base de datos personal (tabla `api_keys`)
+-   Protegidas por Row Level Security (solo tú puedes acceder)
+-   Disponibles en todos tus dispositivos y sesiones
+-   Permanecen hasta que las elimines manualmente
+
+### 🚀 Configuración paso a paso
+
+1. **Obtén una API key**:
+   - [OpenAI API Keys](https://platform.openai.com/api-keys) (requiere créditos pagados)
+   - [Google AI Studio](https://aistudio.google.com/app/apikey) (tiene plan gratuito)
+
+2. **Accede a la configuración**:
+   - Haz clic en el botón **"Setup"** (⚙️) en el sidebar
+   - Ve a la sección "API Keys de IA"
+
+3. **Agrega tu API key**:
+   - Ingresa un nombre descriptivo (ej: "OpenAI Personal")
+   - Selecciona el proveedor (OpenAI o Gemini)
+   - Pega tu API key
+   - Elige el modelo a usar
+   - Decide si guardarla temporal o permanentemente
+
+4. **Activa la key**:
+   - Solo puedes tener **una key activa** a la vez
+   - La key activa se usará automáticamente al mejorar textos con IA
+
+### 📊 Sistema de logs
+
+Todas las peticiones a la IA se registran automáticamente en la tabla `ai_request_logs` con:
+
+-   Información de la API key usada (proveedor, modelo)
+-   Contexto de la mejora (resumen, experiencia, educación)
+-   Prompt enviado y respuesta recibida
+-   Métricas de rendimiento (tiempo de respuesta, intentos)
+-   Mensajes de error (si los hay)
+
+**Limpieza automática**: El sistema mantiene solo los últimos **500 logs por usuario**. Los logs más antiguos se eliminan automáticamente tras cada nueva petición.
+
+### 🔒 Seguridad
+
+-   Las API keys **nunca** se comparten entre usuarios
+-   Cada usuario solo puede ver y usar sus propias keys
+-   Las políticas RLS garantizan el aislamiento total de datos
+-   Las keys persistentes se almacenan encriptadas en Supabase
+
+### 🎯 Proveedores soportados
+
+| Proveedor | Modelos disponibles | Plan gratuito |
+|-----------|---------------------|---------------|
+| OpenAI    | gpt-4, gpt-3.5-turbo | ❌ No (requiere créditos) |
+| Google Gemini | gemini-1.5-flash, gemini-1.5-pro | ✅ Sí (con límites) |
+
+------------------------------------------------------------------------
+
+## 🔧 Comandos útiles
+
+### Desarrollo
 
 ``` bash
+npm run dev          # Servidor de desarrollo (puerto 8080)
+npm run build        # Build de producción (output: dist/)
+npm run build:dev    # Build en modo desarrollo
+npm run preview      # Preview del build de producción
+npm run lint         # Ejecutar ESLint
+npm run test         # Ejecutar tests (vitest run)
+npm run test:watch   # Tests en modo watch (vitest)
+```
+
+### Docker
+
+``` bash
+# Iniciar aplicación en producción
+docker-compose up -d
+
+# Ver logs en tiempo real
 docker-compose logs -f
+
+# Reiniciar servicios
 docker-compose restart
+
+# Rebuild completo (necesario tras cambios en .env)
 docker-compose build --no-cache && docker-compose up -d
+
+# Detener y eliminar contenedores
+docker-compose down
+
+# Build manual de imagen
+docker build -t makemeet .
+
+# Ejecutar contenedor manual
+docker run -p 8080:80 makemeet
 ```
 
 ------------------------------------------------------------------------
 
 ## 🔐 Seguridad en producción
 
--   Usa **HTTPS con Nginx o Traefik**\
--   Mantén **RLS habilitado en Supabase**\
--   Nunca expongas keys privadas en el frontend\
--   Solo usa variables con prefijo `VITE_` para claves públicas
+### Recomendaciones importantes
+
+-   ✅ Usa **HTTPS** con Nginx, Traefik o Caddy como reverse proxy
+-   ✅ Mantén **Row Level Security (RLS) habilitado** en todas las tablas de Supabase
+-   ✅ Nunca expongas claves privadas en el frontend
+-   ✅ Solo usa variables con prefijo `VITE_` para claves públicas (anon key)
+-   ✅ Configura correctamente los **CORS** en tu proyecto de Supabase
+-   ✅ Habilita **MFA/2FA** en tu cuenta de Supabase en producción
+-   ✅ Revisa regularmente los logs de acceso y actividad en Supabase
+
+### Variables de entorno públicas vs privadas
+
+**Públicas (seguro exponer)**:
+-   `VITE_SUPABASE_URL`: URL de tu proyecto Supabase
+-   `VITE_SUPABASE_PUBLISHABLE_KEY`: Anon/public key (diseñada para el navegador)
+-   `VITE_SUPABASE_PROJECT_ID`: ID del proyecto
+
+**Privadas (NUNCA exponer)**:
+-   Service role key de Supabase (solo para backend/Edge Functions)
+-   API keys de OpenAI o Gemini (cada usuario gestiona las suyas)
+
+------------------------------------------------------------------------
+
+## 📁 Estructura del proyecto
+
+```
+makemeet/
+├── src/
+│   ├── components/          # Componentes React
+│   │   ├── auth/           # Diálogos de autenticación
+│   │   ├── cv/             # Gestión de CVs (lista, guardado)
+│   │   ├── layout/         # Layout (AppSidebar, AppContent)
+│   │   ├── setup/          # Wizard de configuración inicial
+│   │   ├── templates/      # Plantillas de CV (Clásica, Moderna, etc.)
+│   │   └── ui/             # Componentes primitivos de shadcn/ui
+│   ├── contexts/           # Contextos React (Auth, Setup)
+│   ├── hooks/              # Custom hooks (useCVs, useGitHub, useAPIKeys)
+│   ├── integrations/       # Integración con Supabase (client, types)
+│   ├── pages/              # Páginas de rutas (Index, Setup, NotFound)
+│   ├── services/           # Servicios (aiService, setupService)
+│   ├── types/              # Tipos TypeScript (CVData, APIKey, AILog)
+│   └── main.tsx            # Entry point
+├── public/                 # Assets estáticos
+├── docker-compose.yml      # Configuración de Docker Compose
+├── Dockerfile             # Imagen de Docker
+├── .env.example           # Ejemplo de variables de entorno
+├── CLAUDE.md              # Guía para Claude Code
+└── README.md              # Este archivo
+```
+
+------------------------------------------------------------------------
+
+## 🐛 Solución de problemas
+
+### La aplicación no conecta con Supabase
+
+1. Verifica que las credenciales en `.env` sean correctas
+2. Accede al botón "Setup" para verificar la conexión
+3. Asegúrate de que tu proyecto de Supabase esté activo
+4. Comprueba que las tablas existan en tu base de datos
+
+### Error al mejorar textos con IA
+
+1. Verifica que tengas una API key activa configurada
+2. Comprueba que tu API key tenga créditos disponibles
+3. Revisa los logs de IA en Supabase para ver el error específico
+4. Asegúrate de estar usando el modelo correcto para tu proveedor
+
+### Docker no refleja cambios en .env
+
+Debes reconstruir la imagen completamente:
+
+``` bash
+docker-compose build --no-cache && docker-compose up -d
+```
+
+### Error de tipos TypeScript en desarrollo
+
+Si los tipos de Supabase están desactualizados, asegúrate de que las tablas coincidan con los tipos en `src/integrations/supabase/types.ts`.
+
+------------------------------------------------------------------------
+
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Si encuentras un bug o tienes una sugerencia:
+
+1. Abre un **issue** describiendo el problema o mejora
+2. Si quieres contribuir código, abre un **pull request** con tus cambios
+3. Asegúrate de que el código pase los tests y el linter antes de enviar
 
 ------------------------------------------------------------------------
 
 ## 📜 Licencia
 
-Este proyecto está bajo la **Licencia MIT**.
+Este proyecto está bajo la **Licencia MIT**. Puedes usarlo, modificarlo y distribuirlo libremente.
 
 ------------------------------------------------------------------------
 
 ## 👨‍💻 Autor
 
 Desarrollado por **Eco -- Katze**
+
+---
+
+**¿Necesitas ayuda?** Abre un issue en el repositorio o consulta la documentación de:
+- [Supabase](https://supabase.com/docs)
+- [React](https://react.dev)
+- [Tailwind CSS](https://tailwindcss.com/docs)
+- [shadcn/ui](https://ui.shadcn.com)

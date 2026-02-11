@@ -25,24 +25,24 @@ export const PLANTILLAS: InfoPlantilla[] = [
     id: 'moderno',
     nombre: 'Moderno',
     descripcion: 'Diseño limpio con colores vibrantes',
-    colorPrimario: '#5b4cdb'
+    colorPrimario: 'hsl(203 54% 27%)'
   },
   {
     id: 'clasico',
     nombre: 'Clásico',
     descripcion: 'Diseño tradicional y formal',
-    colorPrimario: '#1e3a5f'
+    colorPrimario: 'hsl(203 54% 20%)'
   },
   {
     id: 'minimalista',
     nombre: 'Minimalista',
     descripcion: 'Diseño simple y elegante',
-    colorPrimario: '#000000'
+    colorPrimario: 'hsl(170 8% 25%)'
   },
   {
     id: 'creativo',
     nombre: 'Creativo',
     descripcion: 'Diseño visual llamativo',
-    colorPrimario: '#e11d48'
+    colorPrimario: 'hsl(170 54% 40%)'
   }
 ];

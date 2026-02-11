@@ -4,17 +4,17 @@
 # version: "3.8"
 
 services:
-  cv-generator-app:
+  makemeet:
     build:
       context: .
       dockerfile: Dockerfile
     env_file:
       - .env
-    container_name: cv-generator-app
+    container_name: makemeet
     ports:
       - "${APP_PORT:-8080}:80"
     restart: unless-stopped
 
 networks:
   default:
-    name: cv-generator-network
+    name: makemeet-network
