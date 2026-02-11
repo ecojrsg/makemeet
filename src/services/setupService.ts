@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   user_id UUID NOT NULL UNIQUE,
   nombre TEXT,
   avatar_url TEXT,
-  is_admin BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -29,17 +28,56 @@ CREATE TABLE IF NOT EXISTS public.cvs (
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Tabla de API Keys globales para IA
+-- Tabla de API Keys personales de usuarios
 CREATE TABLE IF NOT EXISTS public.api_keys (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   nombre TEXT NOT NULL,
   proveedor TEXT NOT NULL CHECK (proveedor IN ('openai', 'gemini')),
   clave TEXT NOT NULL,
   modelo TEXT NOT NULL,
-  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  activa BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
+
+-- Índice único: solo UNA key activa por usuario
+CREATE UNIQUE INDEX IF NOT EXISTS unique_active_key_per_user 
+  ON public.api_keys(user_id) 
+  WHERE activa = true;
+
+-- Tabla de logs de peticiones a IA
+CREATE TABLE IF NOT EXISTS public.ai_request_logs (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  
+  -- Información de la API key usada
+  api_key_id UUID REFERENCES public.api_keys(id) ON DELETE SET NULL,
+  api_key_nombre TEXT NOT NULL,
+  proveedor TEXT NOT NULL CHECK (proveedor IN ('openai', 'gemini')),
+  modelo TEXT NOT NULL,
+  
+  -- Datos de la petición
+  contexto TEXT NOT NULL CHECK (contexto IN ('resumen', 'experiencia', 'educacion')),
+  info_adicional TEXT,
+  prompt TEXT NOT NULL,
+  
+  -- Datos de la respuesta
+  respuesta TEXT NOT NULL,
+  
+  -- Métricas de rendimiento
+  tiempo_respuesta_ms INTEGER,
+  intentos INTEGER DEFAULT 1,
+  error_mensaje TEXT,
+  
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+);
+
+-- Índices para consultas eficientes
+CREATE INDEX IF NOT EXISTS idx_ai_logs_user_id ON public.ai_request_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_logs_created_at ON public.ai_request_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_logs_user_created ON public.ai_request_logs(user_id, created_at DESC);
 
 -- ============================================
 -- SEGURIDAD (RLS)
@@ -49,6 +87,7 @@ CREATE TABLE IF NOT EXISTS public.api_keys (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cvs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_request_logs ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para profiles
 CREATE POLICY "Usuarios pueden ver su propio perfil" 
@@ -84,41 +123,37 @@ CREATE POLICY "Usuarios pueden eliminar sus propios CVs"
 ON public.cvs FOR DELETE 
 USING (auth.uid() = user_id);
 
--- Políticas para api_keys
-CREATE POLICY "Usuarios autenticados pueden ver API keys globales"
+-- Políticas para api_keys (cada usuario solo ve/maneja sus propias keys)
+CREATE POLICY "Usuarios pueden ver sus propias API keys"
 ON public.api_keys FOR SELECT
 TO authenticated
-USING (true);
+USING (auth.uid() = user_id);
 
-CREATE POLICY "Solo admins pueden insertar API keys globales"
+CREATE POLICY "Usuarios pueden insertar sus propias API keys"
 ON public.api_keys FOR INSERT
 TO authenticated
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE user_id = auth.uid() AND is_admin = true
-  )
-);
+WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Solo admins pueden actualizar API keys globales"
+CREATE POLICY "Usuarios pueden actualizar sus propias API keys"
 ON public.api_keys FOR UPDATE
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE user_id = auth.uid() AND is_admin = true
-  )
-);
+USING (auth.uid() = user_id);
 
-CREATE POLICY "Solo admins pueden eliminar API keys globales"
+CREATE POLICY "Usuarios pueden eliminar sus propias API keys"
 ON public.api_keys FOR DELETE
 TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE user_id = auth.uid() AND is_admin = true
-  )
-);
+USING (auth.uid() = user_id);
+
+-- Políticas para ai_request_logs
+CREATE POLICY "Usuarios pueden ver sus propios logs"
+ON public.ai_request_logs FOR SELECT
+TO authenticated
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Usuarios pueden insertar sus propios logs"
+ON public.ai_request_logs FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
 
 -- ============================================
 -- FUNCIONES Y TRIGGERS
@@ -131,17 +166,11 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
 AS $$
-DECLARE
-  es_primer_usuario BOOLEAN;
 BEGIN
-  -- Verificar si es el primer usuario
-  SELECT COUNT(*) = 0 INTO es_primer_usuario FROM public.profiles;
-  
-  INSERT INTO public.profiles (user_id, nombre, is_admin)
+  INSERT INTO public.profiles (user_id, nombre)
   VALUES (
     NEW.id, 
-    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email),
-    es_primer_usuario
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email)
   );
   RETURN NEW;
 END;
@@ -180,6 +209,33 @@ DROP TRIGGER IF EXISTS update_api_keys_updated_at ON public.api_keys;
 CREATE TRIGGER update_api_keys_updated_at
   BEFORE UPDATE ON public.api_keys
   FOR EACH ROW EXECUTE FUNCTION public.actualizar_updated_at();
+
+-- Función para limpiar logs antiguos (mantener solo últimos N por usuario)
+CREATE OR REPLACE FUNCTION public.limpiar_logs_antiguos_por_usuario()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  limite_logs INTEGER := 500; -- Mantener solo últimos 500 logs por usuario
+BEGIN
+  DELETE FROM public.ai_request_logs
+  WHERE id IN (
+    SELECT id FROM public.ai_request_logs
+    WHERE user_id = NEW.user_id
+    ORDER BY created_at DESC
+    OFFSET limite_logs
+  );
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger para ejecutar limpieza después de cada inserción
+DROP TRIGGER IF EXISTS trigger_limpiar_logs ON public.ai_request_logs;
+CREATE TRIGGER trigger_limpiar_logs
+  AFTER INSERT ON public.ai_request_logs
+  FOR EACH ROW EXECUTE FUNCTION public.limpiar_logs_antiguos_por_usuario();
 `;
 
 export interface ResultadoVerificacion {
@@ -188,6 +244,7 @@ export interface ResultadoVerificacion {
     profiles: boolean;
     cvs: boolean;
     api_keys: boolean;
+    ai_request_logs: boolean;
   };
   proveedoresAuth: string[];
   errorMensaje: string | null;
@@ -209,8 +266,8 @@ export async function verificarConexion(): Promise<boolean> {
 /**
  * Verifica si las tablas necesarias existen
  */
-export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boolean; api_keys: boolean }> {
-  const resultado = { profiles: false, cvs: false, api_keys: false };
+export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boolean; api_keys: boolean; ai_request_logs: boolean }> {
+  const resultado = { profiles: false, cvs: false, api_keys: false, ai_request_logs: false };
 
   try {
     // Verificar tabla profiles
@@ -263,6 +320,18 @@ export async function verificarTablas(): Promise<{ profiles: boolean; cvs: boole
     resultado.api_keys = false;
   }
 
+  try {
+    // Verificar tabla ai_request_logs
+    // @ts-ignore - tabla ai_request_logs no está en tipos generados aún
+    const { error: errorLogs } = await supabase.from('ai_request_logs').select('id').limit(1);
+
+    if (!errorLogs) {
+      resultado.ai_request_logs = true;
+    }
+  } catch {
+    resultado.ai_request_logs = false;
+  }
+
   return resultado;
 }
 
@@ -285,7 +354,7 @@ export function obtenerProveedoresConfigurados(): string[] {
 export async function verificarSistema(): Promise<ResultadoVerificacion> {
   const resultado: ResultadoVerificacion = {
     conexionOk: false,
-    tablas: { profiles: false, cvs: false, api_keys: false },
+    tablas: { profiles: false, cvs: false, api_keys: false, ai_request_logs: false },
     proveedoresAuth: [],
     errorMensaje: null,
   };

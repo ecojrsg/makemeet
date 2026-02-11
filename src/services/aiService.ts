@@ -1,16 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
-import type {
-  ConfigIA,
-  APIKeyPersonal,
-  APIKeyGlobal,
-  LocalStoragePersonalKeys,
-  LocalStorageActiveKey,
-} from '@/types/apiKeys';
+import type { ConfigIA, APIKeyTemporal, APIKeySaved, ProveedorIA } from '@/types/apiKeys';
+import type { LogInput } from '@/types/aiLogs';
 
-const STORAGE_KEYS = {
-  personalKeys: 'ai_personal_keys',
-  activeKey: 'ai_active_key',
-};
+const SESSION_STORAGE_KEY = 'temp_api_key';
 
 const SYSTEM_PROMPT =
   'Eres un experto en redacción de CVs profesionales. Reglas: ' +
@@ -28,17 +20,19 @@ const CONTEXTO_PROMPTS: Record<string, string> = {
 
 /**
  * Función auxiliar para retry con exponential backoff
+ * Retorna el resultado y el número de intentos realizados
  */
 async function retryConBackoff<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
   delayMs: number = 1000
-): Promise<T> {
+): Promise<{ resultado: T; intentos: number }> {
   let lastError: Error | null = null;
 
   for (let intento = 0; intento < maxRetries; intento++) {
     try {
-      return await fn();
+      const resultado = await fn();
+      return { resultado, intentos: intento + 1 };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
@@ -74,120 +68,125 @@ async function retryConBackoff<T>(
   throw lastError || new Error('Error desconocido en retry');
 }
 
-
 /**
- * Obtiene las API keys personales desde localStorage
+ * Obtiene la API key temporal de sessionStorage
  */
-function obtenerKeysPersonales(): APIKeyPersonal[] {
+function obtenerKeyTemporal(): APIKeyTemporal | null {
   try {
-    const stored = localStorage.getItem(STORAGE_KEYS.personalKeys);
-    if (!stored) return [];
-    
-    const data: LocalStoragePersonalKeys = JSON.parse(stored);
-    return data.keys || [];
-  } catch (error) {
-    console.warn('[aiService] Error al leer keys personales de localStorage:', error);
-    return [];
-  }
-}
-
-/**
- * Obtiene las API keys globales desde Supabase
- */
-async function obtenerKeysGlobales(): Promise<APIKeyGlobal[]> {
-  try {
-    // @ts-ignore - tabla api_keys no está en tipos generados aún
-    const { data, error } = await supabase.from('api_keys').select('*').order('created_at', { ascending: false });
-
-    if (error) {
-      console.warn('[aiService] Error al leer keys globales de Supabase:', error.message);
-      return [];
-    }
-
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      nombre: row.nombre,
-      proveedor: row.proveedor as 'openai' | 'gemini',
-      clave: row.clave,
-      modelo: row.modelo,
-      tipo: 'global',
-      created_by: row.created_by,
-      created_at: row.created_at,
-      updated_at: row.updated_at,
-    }));
-  } catch (error) {
-    console.warn('[aiService] Error inesperado al leer keys globales:', error);
-    return [];
-  }
-}
-
-/**
- * Obtiene la key activa seleccionada por el usuario
- */
-function obtenerKeyActiva(): LocalStorageActiveKey | null {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.activeKey);
+    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (!stored) return null;
     
-    return JSON.parse(stored);
+    const data: APIKeyTemporal = JSON.parse(stored);
+    return data;
   } catch (error) {
-    console.warn('[aiService] Error al leer key activa de localStorage:', error);
+    console.warn('[aiService] Error al leer key temporal de sessionStorage:', error);
     return null;
   }
 }
 
 /**
- * Obtiene la configuración de IA actual (key activa con sus datos)
- * Prioridad: key activa seleccionada > primera key disponible
+ * Guarda una API key temporal en sessionStorage
+ */
+export function guardarKeyTemporal(proveedor: ProveedorIA, clave: string, modelo: string): void {
+  try {
+    const data: APIKeyTemporal = { proveedor, clave, modelo };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(data));
+    console.log('[aiService] ✅ Key temporal guardada en sessionStorage');
+  } catch (error) {
+    console.error('[aiService] Error al guardar key temporal:', error);
+    throw new Error('No se pudo guardar la key temporal');
+  }
+}
+
+/**
+ * Elimina la API key temporal de sessionStorage
+ */
+export function eliminarKeyTemporal(): void {
+  sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  console.log('[aiService] 🗑️ Key temporal eliminada');
+}
+
+/**
+ * Obtiene la API key activa guardada en Supabase del usuario actual
+ */
+async function obtenerKeyGuardadaActiva(): Promise<APIKeySaved | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.warn('[aiService] Usuario no autenticado');
+      return null;
+    }
+
+    // @ts-ignore - tabla api_keys no está en tipos generados aún
+    const { data, error } = await supabase
+      .from('api_keys')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('activa', true)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No hay key activa, no es un error
+        return null;
+      }
+      console.warn('[aiService] Error al obtener key guardada activa:', error.message);
+      return null;
+    }
+
+    return data as APIKeySaved;
+  } catch (error) {
+    console.warn('[aiService] Error inesperado al obtener key guardada:', error);
+    return null;
+  }
+}
+
+/**
+ * Obtiene la configuración de IA actual
+ * Prioridad: 1) Temporal (sessionStorage), 2) Guardada activa (Supabase)
  */
 export async function obtenerConfigIA(): Promise<ConfigIA | null> {
-  const keyActiva = obtenerKeyActiva();
-  const keysPersonales = obtenerKeysPersonales();
-  const keysGlobales = await obtenerKeysGlobales();
-
-  // Si hay una key activa seleccionada, buscarla
-  if (keyActiva) {
-    if (keyActiva.tipo === 'personal') {
-      const key = keysPersonales.find((k) => k.id === keyActiva.keyId);
-      if (key) {
-        return {
-          provider: key.proveedor,
-          apiKey: key.clave,
-          modelo: key.modelo,
-        };
-      }
-    } else if (keyActiva.tipo === 'global') {
-      const key = keysGlobales.find((k) => k.id === keyActiva.keyId);
-      if (key) {
-        return {
-          provider: key.proveedor,
-          apiKey: key.clave,
-          modelo: key.modelo,
-        };
-      }
-    }
-  }
-
-  // Si no hay key activa o no se encontró, usar la primera disponible
-  // Prioridad: personal > global
-  if (keysPersonales.length > 0) {
-    const key = keysPersonales[0];
+  // 1. Intentar obtener key temporal
+  const keyTemporal = obtenerKeyTemporal();
+  
+  if (keyTemporal) {
+    console.log('[aiService] 🔑 Usando key temporal:', {
+      proveedor: keyTemporal.proveedor,
+      modelo: keyTemporal.modelo,
+    });
+    
     return {
-      provider: key.proveedor,
-      apiKey: key.clave,
-      modelo: key.modelo,
+      provider: keyTemporal.proveedor,
+      apiKey: keyTemporal.clave,
+      modelo: keyTemporal.modelo,
+      source: 'temporal',
+      keyId: null,
+      keyNombre: 'Temporal',
     };
   }
 
-  if (keysGlobales.length > 0) {
-    const key = keysGlobales[0];
+  // 2. Si no hay temporal, intentar obtener key guardada activa
+  const keyGuardada = await obtenerKeyGuardadaActiva();
+  
+  if (keyGuardada) {
+    console.log('[aiService] 💾 Usando key guardada:', {
+      nombre: keyGuardada.nombre,
+      proveedor: keyGuardada.proveedor,
+      modelo: keyGuardada.modelo,
+    });
+    
     return {
-      provider: key.proveedor,
-      apiKey: key.clave,
-      modelo: key.modelo,
+      provider: keyGuardada.proveedor,
+      apiKey: keyGuardada.clave,
+      modelo: keyGuardada.modelo,
+      source: 'saved',
+      keyId: keyGuardada.id,
+      keyNombre: keyGuardada.nombre,
     };
   }
 
+  // No hay ninguna key disponible
   return null;
 }
 
@@ -200,6 +199,44 @@ export async function iaDisponible(): Promise<boolean> {
 }
 
 /**
+ * Guarda un log de petición a IA en Supabase
+ */
+async function guardarLog(input: LogInput): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.warn('[aiService] No se puede guardar log: usuario no autenticado');
+      return;
+    }
+
+    // @ts-ignore - tabla ai_request_logs no está en tipos generados aún
+    const { error } = await supabase.from('ai_request_logs').insert({
+      user_id: user.id,
+      api_key_id: input.api_key_id,
+      api_key_nombre: input.api_key_nombre,
+      proveedor: input.proveedor,
+      modelo: input.modelo,
+      contexto: input.contexto,
+      info_adicional: input.info_adicional || null,
+      prompt: input.prompt,
+      respuesta: input.respuesta,
+      tiempo_respuesta_ms: input.tiempo_respuesta_ms,
+      intentos: input.intentos,
+      error_mensaje: input.error_mensaje || null,
+    });
+
+    if (error) {
+      console.error('[aiService] Error al guardar log:', error);
+    } else {
+      console.log('[aiService] 📝 Log guardado exitosamente');
+    }
+  } catch (error) {
+    console.error('[aiService] Error inesperado al guardar log:', error);
+  }
+}
+
+/**
  * Mejora un texto usando IA con retry automático
  */
 export async function mejorarTextoConIA(
@@ -207,11 +244,12 @@ export async function mejorarTextoConIA(
   contexto: 'resumen' | 'experiencia' | 'educacion',
   infoAdicional?: string
 ): Promise<string> {
+  const startTime = Date.now();
   const config = await obtenerConfigIA();
 
   if (!config) {
     throw new Error(
-      'No hay configuración de IA. Configura una API key en la página de setup.'
+      'No hay configuración de IA disponible. Configura una API key en la página de setup.'
     );
   }
 
@@ -227,289 +265,210 @@ export async function mejorarTextoConIA(
     contexto,
     proveedor: config.provider,
     modelo: config.modelo,
+    source: config.source,
+    keyNombre: config.keyNombre,
   });
 
-  return retryConBackoff(async () => {
-    if (config.provider === 'openai') {
-      return llamarOpenAI(config.apiKey, config.modelo, userPrompt);
-    } else {
-      return llamarGemini(config.apiKey, config.modelo, userPrompt);
-    }
-  });
+  let respuesta = '';
+  let intentos = 1;
+  let errorMensaje: string | undefined;
+
+  try {
+    const { resultado, intentos: numIntentos } = await retryConBackoff(async () => {
+      if (config.provider === 'openai') {
+        return llamarOpenAI(config.apiKey, config.modelo, userPrompt);
+      } else {
+        return llamarGemini(config.apiKey, config.modelo, userPrompt);
+      }
+    });
+
+    respuesta = resultado;
+    intentos = numIntentos;
+
+    // Guardar log exitoso
+    const tiempoRespuesta = Date.now() - startTime;
+    await guardarLog({
+      api_key_id: config.keyId,
+      api_key_nombre: config.keyNombre,
+      proveedor: config.provider,
+      modelo: config.modelo,
+      contexto,
+      info_adicional: infoAdicional,
+      prompt: texto,
+      respuesta,
+      tiempo_respuesta_ms: tiempoRespuesta,
+      intentos,
+    });
+
+    return respuesta;
+  } catch (error) {
+    // Capturar error y guardar log
+    errorMensaje = error instanceof Error ? error.message : 'Error desconocido';
+    const tiempoRespuesta = Date.now() - startTime;
+
+    await guardarLog({
+      api_key_id: config.keyId,
+      api_key_nombre: config.keyNombre,
+      proveedor: config.provider,
+      modelo: config.modelo,
+      contexto,
+      info_adicional: infoAdicional,
+      prompt: texto,
+      respuesta: '', // Sin respuesta porque hubo error
+      tiempo_respuesta_ms: tiempoRespuesta,
+      intentos,
+      error_mensaje: errorMensaje,
+    });
+
+    // Re-lanzar el error al usuario
+    throw error;
+  }
 }
 
 async function llamarOpenAI(apiKey: string, modelo: string, userPrompt: string): Promise<string> {
   const maskedKey = apiKey.slice(-4).padStart(apiKey.length, '•');
   console.log('[aiService] 🚀 Llamando a OpenAI:', {
     modelo,
-    promptLength: userPrompt.length,
-    apiKey: maskedKey,
+    key: maskedKey,
   });
 
-  const requestBody = {
-    model: modelo,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userPrompt },
-    ],
-    max_tokens: 500,
-    temperature: 0.7,
-  };
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: modelo,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+    }),
+  });
 
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      let errorDetails = null;
-      try {
-        errorDetails = await response.json();
-        console.error('[aiService] ❌ Error de OpenAI:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorDetails,
-        });
-      } catch (e) {
-        console.error('[aiService] ❌ Error de OpenAI (sin detalles):', {
-          status: response.status,
-          statusText: response.statusText,
-        });
-      }
-      handleApiError('openai', response.status, errorDetails);
-    }
-
-    const data = await response.json();
-    const resultado = data.choices?.[0]?.message?.content?.trim();
-
-    if (!resultado) {
-      console.error('[aiService] ❌ OpenAI no generó respuesta:', data);
-      throw new Error('La IA no generó una respuesta. Intenta de nuevo.');
-    }
-
-    console.log('[aiService] ✅ Respuesta de OpenAI recibida:', {
-      length: resultado.length,
-      usage: data.usage,
-    });
-
-    return resultado;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('fetch')) {
-      console.error('[aiService] ❌ Error de red al llamar a OpenAI:', error);
-      throw new Error('Error de conexión con OpenAI. Verifica tu conexión a internet.');
-    }
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('[aiService] ❌ Error de OpenAI:', errorData);
+    handleApiError(response.status, errorData);
   }
+
+  const data = await response.json();
+  const resultado = data.choices?.[0]?.message?.content?.trim();
+
+  if (!resultado) {
+    throw new Error('La IA no generó una respuesta. Intenta de nuevo.');
+  }
+
+  console.log('[aiService] ✅ Respuesta de OpenAI recibida:', {
+    length: resultado.length,
+  });
+
+  return resultado;
 }
 
 async function llamarGemini(apiKey: string, modelo: string, userPrompt: string): Promise<string> {
   const maskedKey = apiKey.slice(-4).padStart(apiKey.length, '•');
   console.log('[aiService] 🚀 Llamando a Gemini:', {
     modelo,
-    promptLength: userPrompt.length,
-    apiKey: maskedKey,
+    key: maskedKey,
   });
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
 
-  const requestBody = {
-    contents: [{ parts: [{ text: userPrompt }] }],
-    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-    generationConfig: {
-      maxOutputTokens: 500,
-      temperature: 0.7,
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
-  };
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: userPrompt }] }],
+      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+      generationConfig: {
+        maxOutputTokens: 500,
+        temperature: 0.7,
       },
-      body: JSON.stringify(requestBody),
-    });
+    }),
+  });
 
-    if (!response.ok) {
-      let errorDetails = null;
-      try {
-        errorDetails = await response.json();
-        console.error('[aiService] ❌ Error de Gemini:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorDetails,
-        });
-      } catch (e) {
-        console.error('[aiService] ❌ Error de Gemini (sin detalles):', {
-          status: response.status,
-          statusText: response.statusText,
-        });
-      }
-      handleApiError('gemini', response.status, errorDetails);
-    }
-
-    const data = await response.json();
-    const resultado = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-    if (!resultado) {
-      console.error('[aiService] ❌ Gemini no generó respuesta:', data);
-      throw new Error('La IA no generó una respuesta. Intenta de nuevo.');
-    }
-
-    console.log('[aiService] ✅ Respuesta de Gemini recibida:', {
-      length: resultado.length,
-      candidates: data.candidates?.length,
-    });
-
-    return resultado;
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('fetch')) {
-      console.error('[aiService] ❌ Error de red al llamar a Gemini:', error);
-      throw new Error('Error de conexión con Gemini. Verifica tu conexión a internet.');
-    }
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error('[aiService] ❌ Error de Gemini:', errorData);
+    handleApiError(response.status, errorData);
   }
+
+  const data = await response.json();
+  const resultado = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+  if (!resultado) {
+    throw new Error('La IA no generó una respuesta. Intenta de nuevo.');
+  }
+
+  console.log('[aiService] ✅ Respuesta de Gemini recibida:', {
+    length: resultado.length,
+  });
+
+  return resultado;
 }
 
-function handleApiError(provider: 'openai' | 'gemini', status: number, errorDetails?: any): never {
-  // Errores de autenticación
+function handleApiError(status: number, errorData?: any): never {
   if (status === 401 || status === 403) {
-    const detail = errorDetails?.error?.message || '';
-    if (detail.includes('quota') || detail.includes('billing')) {
-      throw new Error(`API key sin créditos o cuenta suspendida (${provider}). Verifica tu cuenta.`);
-    }
-    throw new Error(`API key inválida para ${provider}. Verifica tu configuración.`);
+    throw new Error('API key inválida. Verifica tu configuración.');
   }
-
-  // Rate limiting
   if (status === 429) {
-    throw new Error(`Demasiadas solicitudes a ${provider}. Espera un momento e intenta de nuevo.`);
+    throw new Error('Demasiadas solicitudes. Intenta de nuevo en un momento.');
   }
-
-  // Bad request - usualmente modelo inválido
-  if (status === 400) {
-    const detail = errorDetails?.error?.message || '';
-    if (detail.toLowerCase().includes('model')) {
-      throw new Error(`El modelo especificado no es válido o no está disponible en ${provider}. Actualiza tu configuración.`);
-    }
-    throw new Error(`Petición inválida a ${provider}. Error: ${detail || 'Desconocido'}`);
+  
+  // Manejo específico de errores de cuota/créditos
+  const errorMessage = errorData?.error?.message || '';
+  if (errorMessage.includes('insufficient_quota') || errorMessage.includes('quota')) {
+    throw new Error('Tu API key se quedó sin créditos. Recarga tu cuenta o usa otra key.');
   }
-
-  // Not found - endpoint o recurso no existe
-  if (status === 404) {
-    throw new Error(`Endpoint o modelo no encontrado en ${provider}. Verifica el nombre del modelo.`);
-  }
-
-  // Errores del servidor
-  if (status >= 500) {
-    throw new Error(`Error del servidor de ${provider} (${status}). Intenta de nuevo más tarde.`);
-  }
-
-  // Error genérico
-  throw new Error(`Error del servicio de ${provider} (${status}). Intenta de nuevo.`);
+  
+  throw new Error(`Error del servicio de IA (${status}). Intenta de nuevo.`);
 }
 
 /**
- * Valida una API key realizando una petición de prueba ligera
+ * Prueba una API key haciendo una llamada simple a la API
  */
-export async function validarAPIKey(
-  proveedor: 'openai' | 'gemini',
+export async function probarAPIKey(
+  proveedor: ProveedorIA,
   apiKey: string,
   modelo: string
-): Promise<{ valida: boolean; error?: string }> {
-  console.log('[aiService] 🔍 Validando API key:', { proveedor, modelo });
-
+): Promise<{ exito: boolean; mensaje: string }> {
+  const textoSimple = 'Hola';
+  
   try {
+    console.log('[aiService] 🧪 Probando API key:', { proveedor, modelo });
+    
+    let resultado: string;
+    
     if (proveedor === 'openai') {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelo,
-          messages: [{ role: 'user', content: 'Test' }],
-          max_tokens: 5,
-        }),
-      });
-
-      if (response.ok) {
-        console.log('[aiService] ✅ API key de OpenAI válida');
-        return { valida: true };
-      }
-
-      const errorData = await response.json().catch(() => null);
-      console.error('[aiService] ❌ API key de OpenAI inválida:', errorData);
-
-      if (response.status === 401 || response.status === 403) {
-        return { valida: false, error: 'API key inválida o sin permisos' };
-      }
-      if (response.status === 400) {
-        const msg = errorData?.error?.message || '';
-        if (msg.toLowerCase().includes('model')) {
-          return { valida: false, error: `Modelo "${modelo}" no válido o no disponible` };
-        }
-        return { valida: false, error: 'Configuración inválida' };
-      }
-      if (response.status === 429) {
-        return { valida: false, error: 'Límite de peticiones alcanzado' };
-      }
-
-      return { valida: false, error: `Error ${response.status}` };
+      resultado = await llamarOpenAI(apiKey, modelo, textoSimple);
     } else {
-      // Gemini
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: 'Test' }] }],
-          generationConfig: { maxOutputTokens: 5 },
-        }),
-      });
-
-      if (response.ok) {
-        console.log('[aiService] ✅ API key de Gemini válida');
-        return { valida: true };
-      }
-
-      const errorData = await response.json().catch(() => null);
-      console.error('[aiService] ❌ API key de Gemini inválida:', errorData);
-
-      if (response.status === 400) {
-        const msg = errorData?.error?.message || '';
-        if (msg.toLowerCase().includes('api key')) {
-          return { valida: false, error: 'API key inválida' };
-        }
-        if (msg.toLowerCase().includes('model')) {
-          return { valida: false, error: `Modelo "${modelo}" no válido` };
-        }
-        return { valida: false, error: 'Configuración inválida' };
-      }
-      if (response.status === 403) {
-        return { valida: false, error: 'API key sin permisos' };
-      }
-      if (response.status === 404) {
-        return { valida: false, error: `Modelo "${modelo}" no encontrado` };
-      }
-      if (response.status === 429) {
-        return { valida: false, error: 'Límite de peticiones alcanzado' };
-      }
-
-      return { valida: false, error: `Error ${response.status}` };
+      resultado = await llamarGemini(apiKey, modelo, textoSimple);
     }
+    
+    if (resultado && resultado.length > 0) {
+      console.log('[aiService] ✅ Prueba exitosa');
+      return {
+        exito: true,
+        mensaje: 'La API key funciona correctamente.',
+      };
+    }
+    
+    return {
+      exito: false,
+      mensaje: 'La API respondió pero no generó contenido.',
+    };
   } catch (error) {
-    console.error('[aiService] ❌ Error al validar API key:', error);
-    if (error instanceof Error && error.message.includes('fetch')) {
-      return { valida: false, error: 'Error de conexión. Verifica tu internet.' };
-    }
-    return { valida: false, error: 'Error desconocido al validar' };
+    console.error('[aiService] ❌ Error en prueba:', error);
+    
+    return {
+      exito: false,
+      mensaje: error instanceof Error ? error.message : 'Error al probar la API key.',
+    };
   }
 }
-

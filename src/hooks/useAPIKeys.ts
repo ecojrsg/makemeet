@@ -1,247 +1,188 @@
+// Hook para gestionar API Keys del usuario (guardadas en Supabase)
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type {
-  APIKey,
-  APIKeyPersonal,
-  APIKeyGlobal,
-  APIKeyFormData,
-  LocalStoragePersonalKeys,
-  LocalStorageActiveKey,
-} from '@/types/apiKeys';
-import { useAuth } from '@/contexts/AuthContext';
-
-const STORAGE_KEYS = {
-  personalKeys: 'ai_personal_keys',
-  activeKey: 'ai_active_key',
-};
+import type { APIKeySaved, APIKeyFormData, ProveedorIA } from '@/types/apiKeys';
 
 export function useAPIKeys() {
-  const { usuario } = useAuth();
-  const [keys, setKeys] = useState<APIKey[]>([]);
-  const [activeKeyId, setActiveKeyId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [keys, setKeys] = useState<APIKeySaved[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Cargar keys al iniciar
-  useEffect(() => {
-    loadKeys();
-    checkIfAdmin();
-  }, [usuario]);
-
-  // Verificar si el usuario es admin
-  async function checkIfAdmin() {
-    if (!usuario) {
-      setIsAdmin(false);
-      return;
-    }
-
+  // Cargar keys del usuario actual
+  const loadKeys = async () => {
     try {
-      // @ts-ignore - is_admin no está en tipos generados aún
-      const { data } = await supabase.from('profiles').select('is_admin').eq('user_id', usuario.id).single();
+      setLoading(true);
+      setError(null);
 
-      setIsAdmin(data?.is_admin || false);
-    } catch {
-      setIsAdmin(false);
-    }
-  }
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setKeys([]);
+        return;
+      }
 
-  // Cargar todas las keys (personales + globales)
-  async function loadKeys() {
-    setLoading(true);
-    try {
-      const personal = loadPersonalKeys();
-      const global = await loadGlobalKeys();
-      const active = loadActiveKey();
+      // @ts-ignore - tabla api_keys no está en tipos generados aún
+      const { data, error: fetchError } = await supabase
+        .from('api_keys')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-      setKeys([...personal, ...global]);
-      setActiveKeyId(active?.keyId || null);
-    } catch (error) {
-      console.error('[useAPIKeys] Error al cargar keys:', error);
+      if (fetchError) {
+        throw new Error(fetchError.message);
+      }
+
+      setKeys((data || []) as APIKeySaved[]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al cargar API keys';
+      setError(errorMessage);
+      console.error('[useAPIKeys] Error al cargar keys:', err);
     } finally {
       setLoading(false);
     }
-  }
-
-  // Cargar keys personales desde localStorage
-  function loadPersonalKeys(): APIKeyPersonal[] {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.personalKeys);
-      if (!stored) return [];
-
-      const data: LocalStoragePersonalKeys = JSON.parse(stored);
-      return data.keys || [];
-    } catch {
-      return [];
-    }
-  }
-
-  // Cargar keys globales desde Supabase
-  async function loadGlobalKeys(): Promise<APIKeyGlobal[]> {
-    try {
-      // @ts-ignore - tabla api_keys no está en tipos generados aún
-      const { data, error } = await supabase.from('api_keys').select('*').order('created_at', { ascending: false });
-
-      if (error) {
-        console.warn('[useAPIKeys] Error al cargar keys globales:', error.message);
-        return [];
-      }
-
-      return (data || []).map((row: any) => ({
-        id: row.id,
-        nombre: row.nombre,
-        proveedor: row.proveedor,
-        clave: row.clave,
-        modelo: row.modelo,
-        tipo: 'global' as const,
-        created_by: row.created_by,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      }));
-    } catch {
-      return [];
-    }
-  }
-
-  // Cargar key activa
-  function loadActiveKey(): LocalStorageActiveKey | null {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.activeKey);
-      if (!stored) return null;
-      return JSON.parse(stored);
-    } catch {
-      return null;
-    }
-  }
-
-  // Guardar keys personales en localStorage
-  function savePersonalKeys(personalKeys: APIKeyPersonal[]) {
-    const data: LocalStoragePersonalKeys = { keys: personalKeys };
-    localStorage.setItem(STORAGE_KEYS.personalKeys, JSON.stringify(data));
-  }
-
-  // Guardar key activa
-  function saveActiveKey(keyId: string | null, tipo: 'personal' | 'global' | null) {
-    if (!keyId || !tipo) {
-      localStorage.removeItem(STORAGE_KEYS.activeKey);
-      return;
-    }
-
-    const data: LocalStorageActiveKey = { keyId, tipo };
-    localStorage.setItem(STORAGE_KEYS.activeKey, JSON.stringify(data));
-  }
+  };
 
   // Agregar nueva key
-  async function addKey(formData: APIKeyFormData): Promise<{ success: boolean; error?: string }> {
-    try {
-      if (formData.tipo === 'personal') {
-        // Agregar key personal a localStorage
-        const personalKeys = loadPersonalKeys();
-        const newKey: APIKeyPersonal = {
-          id: `local_${formData.proveedor}_${Date.now()}`,
-          nombre: formData.nombre,
-          proveedor: formData.proveedor,
-          clave: formData.clave,
-          modelo: formData.modelo,
-          tipo: 'personal',
-          createdAt: new Date().toISOString(),
-        };
-
-        personalKeys.push(newKey);
-        savePersonalKeys(personalKeys);
-        await loadKeys();
-
-        return { success: true };
-      } else {
-        // Agregar key global a Supabase (solo admins)
-        if (!isAdmin) {
-          return { success: false, error: 'Solo los administradores pueden crear keys globales' };
-        }
-
-        // @ts-ignore - tabla api_keys no está en tipos generados aún
-        const { error } = await supabase.from('api_keys').insert({
-          nombre: formData.nombre,
-          proveedor: formData.proveedor,
-          clave: formData.clave,
-          modelo: formData.modelo,
-          created_by: usuario?.id || null,
-        });
-
-        if (error) {
-          return { success: false, error: error.message };
-        }
-
-        await loadKeys();
-        return { success: true };
-      }
-    } catch (error: any) {
-      return { success: false, error: error.message || 'Error desconocido' };
+  const addKey = async (formData: APIKeyFormData): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('Debes estar autenticado para guardar API keys');
     }
-  }
+
+    // Si la nueva key debe ser activa, desactivar las demás primero
+    if (formData.guardar) {
+      await deactivateAllKeys();
+    }
+
+    // @ts-ignore
+    const { error: insertError } = await supabase
+      .from('api_keys')
+      .insert({
+        user_id: user.id,
+        nombre: formData.nombre || `${formData.proveedor} - ${formData.modelo}`,
+        proveedor: formData.proveedor,
+        clave: formData.clave,
+        modelo: formData.modelo,
+        activa: formData.guardar, // Si guardar=true, marcar como activa por defecto
+      });
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+
+    await loadKeys();
+  };
+
+  // Actualizar key existente
+  const updateKey = async (id: string, formData: Partial<APIKeyFormData>): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('Debes estar autenticado');
+    }
+
+    const updateData: any = {};
+    
+    if (formData.nombre !== undefined) updateData.nombre = formData.nombre;
+    if (formData.proveedor !== undefined) updateData.proveedor = formData.proveedor;
+    if (formData.clave !== undefined) updateData.clave = formData.clave;
+    if (formData.modelo !== undefined) updateData.modelo = formData.modelo;
+
+    // @ts-ignore
+    const { error: updateError } = await supabase
+      .from('api_keys')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', user.id); // Asegurar que solo actualice sus propias keys
+
+    if (updateError) {
+      throw new Error(updateError.message);
+    }
+
+    await loadKeys();
+  };
 
   // Eliminar key
-  async function deleteKey(key: APIKey): Promise<{ success: boolean; error?: string }> {
-    try {
-      if (key.tipo === 'personal') {
-        // Eliminar key personal de localStorage
-        const personalKeys = loadPersonalKeys();
-        const filtered = personalKeys.filter((k) => k.id !== key.id);
-        savePersonalKeys(filtered);
-
-        // Si era la key activa, limpiar selección
-        if (activeKeyId === key.id) {
-          saveActiveKey(null, null);
-          setActiveKeyId(null);
-        }
-
-        await loadKeys();
-        return { success: true };
-      } else {
-        // Eliminar key global de Supabase (solo admins)
-        if (!isAdmin) {
-          return { success: false, error: 'Solo los administradores pueden eliminar keys globales' };
-        }
-
-        // @ts-ignore - tabla api_keys no está en tipos generados aún
-        const { error } = await supabase.from('api_keys').delete().eq('id', key.id);
-
-        if (error) {
-          return { success: false, error: error.message };
-        }
-
-        // Si era la key activa, limpiar selección
-        if (activeKeyId === key.id) {
-          saveActiveKey(null, null);
-          setActiveKeyId(null);
-        }
-
-        await loadKeys();
-        return { success: true };
-      }
-    } catch (error: any) {
-      return { success: false, error: error.message || 'Error desconocido' };
-    }
-  }
-
-  // Seleccionar key activa
-  async function setActiveKey(key: APIKey | null) {
-    if (!key) {
-      saveActiveKey(null, null);
-      setActiveKeyId(null);
-      return;
+  const deleteKey = async (id: string): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('Debes estar autenticado');
     }
 
-    saveActiveKey(key.id, key.tipo);
-    setActiveKeyId(key.id);
-  }
+    // @ts-ignore
+    const { error: deleteError } = await supabase
+      .from('api_keys')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id); // Asegurar que solo elimine sus propias keys
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+
+    await loadKeys();
+  };
+
+  // Activar una key específica (desactiva las demás)
+  const activateKey = async (id: string): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('Debes estar autenticado');
+    }
+
+    // Desactivar todas las keys del usuario
+    await deactivateAllKeys();
+
+    // Activar la key seleccionada
+    // @ts-ignore
+    const { error: activateError } = await supabase
+      .from('api_keys')
+      .update({ activa: true })
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (activateError) {
+      throw new Error(activateError.message);
+    }
+
+    await loadKeys();
+  };
+
+  // Desactivar todas las keys del usuario
+  const deactivateAllKeys = async (): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) return;
+
+    // @ts-ignore
+    await supabase
+      .from('api_keys')
+      .update({ activa: false })
+      .eq('user_id', user.id);
+  };
+
+  // Obtener la key activa
+  const getActiveKey = (): APIKeySaved | null => {
+    return keys.find(k => k.activa) || null;
+  };
+
+  // Cargar keys al montar el componente
+  useEffect(() => {
+    loadKeys();
+  }, []);
 
   return {
     keys,
-    activeKeyId,
-    isAdmin,
     loading,
+    error,
+    activeKey: getActiveKey(),
+    loadKeys,
     addKey,
+    updateKey,
     deleteKey,
-    setActiveKey,
-    refresh: loadKeys,
+    activateKey,
   };
 }

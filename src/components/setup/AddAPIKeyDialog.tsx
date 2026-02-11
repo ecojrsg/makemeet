@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -18,289 +19,346 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import type { APIKeyFormData, ProveedorIA } from '@/types/apiKeys';
+import type { APIKeyFormData, ProveedorIA, APIKeySaved } from '@/types/apiKeys';
 import { MODELOS_DISPONIBLES } from '@/types/apiKeys';
 import { useToast } from '@/hooks/use-toast';
-import { validarAPIKey } from '@/services/aiService';
+import { useAPIKeys } from '@/hooks/useAPIKeys';
+import { guardarKeyTemporal, probarAPIKey } from '@/services/aiService';
 
 interface AddAPIKeyDialogProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAdd: (data: APIKeyFormData) => Promise<{ success: boolean; error?: string }>;
-  isAdmin: boolean;
+  onClose: () => void;
+  editingKey?: APIKeySaved | null;
 }
 
-export function AddAPIKeyDialog({ open, onOpenChange, onAdd, isAdmin }: AddAPIKeyDialogProps) {
+export function AddAPIKeyDialog({ open, onClose, editingKey }: AddAPIKeyDialogProps) {
   const [loading, setLoading] = useState(false);
-  const [validating, setValidating] = useState(false);
-  const [validationResult, setValidationResult] = useState<{
-    status: 'idle' | 'success' | 'error';
-    message?: string;
-  }>({ status: 'idle' });
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ exito: boolean; mensaje: string } | null>(null);
   const [formData, setFormData] = useState<APIKeyFormData>({
     nombre: '',
     proveedor: 'openai',
     clave: '',
     modelo: 'gpt-5.2',
-    tipo: 'personal',
+    guardar: true, // Por defecto, guardar en Supabase
   });
   const { toast } = useToast();
+  const { addKey, updateKey } = useAPIKeys();
 
-  const handleValidate = async () => {
+  // Si estamos editando, cargar datos de la key
+  useEffect(() => {
+    if (editingKey) {
+      setFormData({
+        nombre: editingKey.nombre,
+        proveedor: editingKey.proveedor,
+        clave: editingKey.clave,
+        modelo: editingKey.modelo,
+        guardar: true, // Siempre guardar si estamos editando
+      });
+    } else {
+      // Reset al cerrar
+      setFormData({
+        nombre: '',
+        proveedor: 'openai',
+        clave: '',
+        modelo: 'gpt-5.2',
+        guardar: true,
+      });
+    }
+    // Reset test result
+    setTestResult(null);
+  }, [editingKey, open]);
+
+  const handleTest = async () => {
     if (!formData.clave.trim()) {
       toast({
         title: 'Error',
-        description: 'Debes proporcionar la API key primero.',
+        description: 'Debes ingresar una API key antes de probar.',
         variant: 'destructive',
       });
       return;
     }
 
-    setValidating(true);
-    setValidationResult({ status: 'idle' });
+    setTesting(true);
+    setTestResult(null);
 
-    const resultado = await validarAPIKey(formData.proveedor, formData.clave, formData.modelo);
+    try {
+      const result = await probarAPIKey(formData.proveedor, formData.clave, formData.modelo);
+      setTestResult(result);
 
-    setValidating(false);
-
-    if (resultado.valida) {
-      setValidationResult({ status: 'success', message: '¡API key válida!' });
+      if (result.exito) {
+        toast({
+          title: 'Prueba exitosa',
+          description: result.mensaje,
+        });
+      } else {
+        toast({
+          title: 'Prueba fallida',
+          description: result.mensaje,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      const mensaje = error instanceof Error ? error.message : 'Error al probar la API key.';
+      setTestResult({ exito: false, mensaje });
       toast({
-        title: 'Validación exitosa',
-        description: 'La API key es válida y funciona correctamente.',
-      });
-    } else {
-      setValidationResult({ status: 'error', message: resultado.error || 'Error desconocido' });
-      toast({
-        title: 'Validación fallida',
-        description: resultado.error || 'No se pudo validar la API key.',
+        title: 'Error',
+        description: mensaje,
         variant: 'destructive',
       });
+    } finally {
+      setTesting(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.nombre.trim()) {
-      toast({
-        title: 'Error de validación',
-        description: 'Debes proporcionar un nombre para la key.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handleSubmit = async () => {
+    // Validaciones
     if (!formData.clave.trim()) {
       toast({
-        title: 'Error de validación',
+        title: 'Error',
         description: 'Debes proporcionar la API key.',
         variant: 'destructive',
       });
       return;
     }
 
-    setLoading(true);
-    const result = await onAdd(formData);
-    setLoading(false);
-
-    if (result.success) {
+    if (formData.guardar && !formData.nombre.trim()) {
       toast({
-        title: 'API Key agregada',
-        description: `La key "${formData.nombre}" fue agregada correctamente.`,
-      });
-      // Reset form
-      setFormData({
-        nombre: '',
-        proveedor: 'openai',
-        clave: '',
-        modelo: 'gpt-5.2',
-        tipo: 'personal',
-      });
-      setValidationResult({ status: 'idle' });
-      onOpenChange(false);
-    } else {
-      toast({
-        title: 'Error al agregar',
-        description: result.error || 'No se pudo agregar la API key.',
+        title: 'Error',
+        description: 'Debes proporcionar un nombre para la key guardada.',
         variant: 'destructive',
       });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (formData.guardar) {
+        // Guardar en Supabase
+        if (editingKey) {
+          // Actualizar key existente
+          await updateKey(editingKey.id, {
+            nombre: formData.nombre,
+            proveedor: formData.proveedor,
+            clave: formData.clave,
+            modelo: formData.modelo,
+          });
+
+          toast({
+            title: 'Key actualizada',
+            description: `La key "${formData.nombre}" fue actualizada correctamente.`,
+          });
+        } else {
+          // Agregar nueva key
+          await addKey(formData);
+
+          toast({
+            title: 'Key guardada',
+            description: `La key "${formData.nombre}" fue guardada y activada correctamente.`,
+          });
+        }
+      } else {
+        // Guardar solo como temporal (sessionStorage)
+        guardarKeyTemporal(formData.proveedor, formData.clave, formData.modelo);
+
+        toast({
+          title: 'Key temporal configurada',
+          description: 'La key se usará solo en esta sesión y no se guardará en el servidor.',
+        });
+      }
+
+      onClose();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'No se pudo guardar la API key.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleProveedorChange = (proveedor: ProveedorIA) => {
-    const modelosDisponibles = MODELOS_DISPONIBLES[proveedor];
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       proveedor,
-      modelo: modelosDisponibles[0]?.value || '',
-    });
-    setValidationResult({ status: 'idle' });
+      modelo: MODELOS_DISPONIBLES[proveedor][0].value,
+    }));
+    // Reset test result cuando cambia el proveedor
+    setTestResult(null);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Agregar API Key</DialogTitle>
-            <DialogDescription>
-              Configura una nueva API key para usar funciones de IA en tus CVs
-            </DialogDescription>
-          </DialogHeader>
+        <DialogHeader>
+          <DialogTitle>
+            {editingKey ? 'Editar API Key' : 'Agregar API Key de IA'}
+          </DialogTitle>
+          <DialogDescription>
+            {editingKey 
+              ? 'Actualiza los datos de tu API key guardada.'
+              : 'Configura una API key para mejorar tus CVs con IA.'}
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            {/* Tipo de key */}
-            <div className="space-y-2">
-              <Label>Tipo de API Key</Label>
-              <RadioGroup
-                value={formData.tipo}
-                onValueChange={(value: 'personal' | 'global') =>
-                  setFormData({ ...formData, tipo: value })
-                }
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="personal" id="tipo-personal" />
-                  <Label htmlFor="tipo-personal" className="font-normal cursor-pointer">
-                    Personal (localStorage) - Solo visible en este navegador
-                  </Label>
-                </div>
-                {isAdmin && (
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="global" id="tipo-global" />
-                    <Label htmlFor="tipo-global" className="font-normal cursor-pointer">
-                      Global (Supabase) - Compartida con todos los usuarios
-                    </Label>
-                  </div>
-                )}
-              </RadioGroup>
-              {!isAdmin && (
+        <div className="space-y-4 py-4">
+          {/* Tipo: Temporal vs Guardada */}
+          {!editingKey && (
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="guardar-key" className="text-sm font-medium">
+                  Guardar en mi cuenta
+                </Label>
                 <p className="text-xs text-muted-foreground">
-                  Solo administradores pueden crear keys globales
+                  {formData.guardar 
+                    ? 'La key se guardará en Supabase y estará disponible siempre'
+                    : 'La key solo se usará en esta sesión (se borra al cerrar el navegador)'}
                 </p>
-              )}
+              </div>
+              <Switch
+                id="guardar-key"
+                checked={formData.guardar}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, guardar: checked }))}
+              />
             </div>
+          )}
 
-            {/* Nombre */}
+          {/* Nombre (solo si se guarda) */}
+          {formData.guardar && (
             <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre</Label>
+              <Label htmlFor="nombre">Nombre de la key</Label>
               <Input
                 id="nombre"
-                placeholder="Ej: OpenAI Personal"
+                placeholder="Ej: Mi key de OpenAI"
                 value={formData.nombre}
-                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                disabled={loading}
+                onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
               />
-              <p className="text-xs text-muted-foreground">
-                Un nombre descriptivo para identificar esta key
-              </p>
             </div>
+          )}
 
-            {/* Proveedor */}
-            <div className="space-y-2">
-              <Label htmlFor="proveedor">Proveedor</Label>
-              <Select
-                value={formData.proveedor}
-                onValueChange={(value) => handleProveedorChange(value as ProveedorIA)}
-                disabled={loading}
-              >
-                <SelectTrigger id="proveedor">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
-                  <SelectItem value="gemini">Google Gemini</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Modelo */}
-            <div className="space-y-2">
-              <Label htmlFor="modelo">Modelo</Label>
-              <Select
-                value={formData.modelo}
-                onValueChange={(value) => setFormData({ ...formData, modelo: value })}
-                disabled={loading}
-              >
-                <SelectTrigger id="modelo">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MODELOS_DISPONIBLES[formData.proveedor].map((modelo) => (
-                    <SelectItem key={modelo.value} value={modelo.value}>
-                      {modelo.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* API Key */}
-            <div className="space-y-2">
-              <Label htmlFor="clave">API Key</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="clave"
-                  type="password"
-                  placeholder="sk-... o AIza..."
-                  value={formData.clave}
-                  onChange={(e) => {
-                    setFormData({ ...formData, clave: e.target.value });
-                    setValidationResult({ status: 'idle' });
-                  }}
-                  disabled={loading || validating}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleValidate}
-                  disabled={loading || validating || !formData.clave.trim()}
-                >
-                  {validating ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Probar'
-                  )}
-                </Button>
-              </div>
-              
-              {validationResult.status === 'success' && (
-                <div className="flex items-center gap-2 text-sm text-green-600">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>{validationResult.message}</span>
-                </div>
-              )}
-              
-              {validationResult.status === 'error' && (
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <XCircle className="h-4 w-4" />
-                  <span>{validationResult.message}</span>
-                </div>
-              )}
-              
-              <p className="text-xs text-muted-foreground">
-                Tu API key nunca se comparte y se almacena de forma segura
-              </p>
-            </div>
+          {/* Proveedor */}
+          <div className="space-y-2">
+            <Label htmlFor="proveedor">Proveedor</Label>
+            <Select
+              value={formData.proveedor}
+              onValueChange={(value) => handleProveedorChange(value as ProveedorIA)}
+            >
+              <SelectTrigger id="proveedor">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="openai">OpenAI</SelectItem>
+                <SelectItem value="gemini">Google Gemini</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
+          {/* Modelo */}
+          <div className="space-y-2">
+            <Label htmlFor="modelo">Modelo</Label>
+            <Select
+              value={formData.modelo}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, modelo: value }))}
             >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Agregar API Key
-            </Button>
-          </DialogFooter>
-        </form>
+              <SelectTrigger id="modelo">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MODELOS_DISPONIBLES[formData.proveedor].map((modelo) => (
+                  <SelectItem key={modelo.value} value={modelo.value}>
+                    {modelo.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* API Key */}
+          <div className="space-y-2">
+            <Label htmlFor="clave">API Key</Label>
+            <div className="flex gap-2">
+              <Input
+                id="clave"
+                type="password"
+                placeholder={formData.proveedor === 'openai' ? 'sk-proj-...' : 'AIza...'}
+                value={formData.clave}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, clave: e.target.value }));
+                  setTestResult(null); // Reset test result cuando cambia la clave
+                }}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleTest}
+                disabled={testing || !formData.clave.trim()}
+                className="shrink-0"
+              >
+                {testing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Probando...
+                  </>
+                ) : (
+                  'Probar'
+                )}
+              </Button>
+            </div>
+            
+            {/* Resultado de la prueba */}
+            {testResult && (
+              <div className={`flex items-center gap-2 text-xs p-2 rounded ${
+                testResult.exito 
+                  ? 'bg-green-50 text-green-700 border border-green-200' 
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {testResult.exito ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <XCircle className="w-4 h-4 shrink-0" />
+                )}
+                <span>{testResult.mensaje}</span>
+              </div>
+            )}
+            
+            <p className="text-xs text-muted-foreground">
+              Obtén tu API key desde:{' '}
+              {formData.proveedor === 'openai' ? (
+                <a
+                  href="https://platform.openai.com/api-keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  OpenAI Platform
+                </a>
+              ) : (
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Google AI Studio
+                </a>
+              )}
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {editingKey ? 'Actualizar' : (formData.guardar ? 'Guardar' : 'Usar Temporalmente')}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

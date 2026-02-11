@@ -2,8 +2,6 @@
 
 export type ProveedorIA = 'openai' | 'gemini';
 
-export type TipoAPIKey = 'personal' | 'global';
-
 export interface ModeloIA {
   value: string;
   label: string;
@@ -28,42 +26,24 @@ export const MODELOS_DISPONIBLES: Record<ProveedorIA, ModeloIA[]> = {
   ],
 };
 
-// API Key personal (localStorage)
-export interface APIKeyPersonal {
-  id: string; // formato: local_{proveedor}_{timestamp}
-  nombre: string;
-  proveedor: ProveedorIA;
-  clave: string;
-  modelo: string;
-  tipo: 'personal';
-  createdAt: string;
-}
-
-// API Key global (Supabase)
-export interface APIKeyGlobal {
+// API Key guardada en Supabase (persistente)
+export interface APIKeySaved {
   id: string; // UUID de Supabase
+  user_id: string;
   nombre: string;
   proveedor: ProveedorIA;
   clave: string;
   modelo: string;
-  tipo: 'global';
-  created_by: string | null;
+  activa: boolean;
   created_at: string;
   updated_at: string;
 }
 
-// Union type para cualquier API Key
-export type APIKey = APIKeyPersonal | APIKeyGlobal;
-
-// Estructura de localStorage para keys personales
-export interface LocalStoragePersonalKeys {
-  keys: APIKeyPersonal[];
-}
-
-// Estructura de localStorage para key activa
-export interface LocalStorageActiveKey {
-  keyId: string; // ID de la key (puede ser local o UUID global)
-  tipo: TipoAPIKey;
+// API Key temporal (sessionStorage, se borra al cerrar el navegador)
+export interface APIKeyTemporal {
+  proveedor: ProveedorIA;
+  clave: string;
+  modelo: string;
 }
 
 // Datos del formulario para crear/editar API Key
@@ -72,7 +52,7 @@ export interface APIKeyFormData {
   proveedor: ProveedorIA;
   clave: string;
   modelo: string;
-  tipo: TipoAPIKey;
+  guardar: boolean; // true = guardar en Supabase, false = solo temporal
 }
 
 // Configuración de IA actual (para usar en aiService)
@@ -80,4 +60,9 @@ export interface ConfigIA {
   provider: ProveedorIA;
   apiKey: string;
   modelo: string;
+  source: 'temporal' | 'saved'; // de dónde viene la configuración
+  
+  // Información adicional para logging
+  keyId: string | null; // ID de la key guardada (NULL si es temporal)
+  keyNombre: string; // "Temporal" o nombre de la key guardada
 }
