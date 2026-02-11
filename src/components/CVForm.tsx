@@ -107,8 +107,7 @@ export function CVForm({ data, onChange }: CVFormProps) {
       degree: '',
       field: '',
       startDate: '',
-      endDate: '',
-      description: ''
+      endDate: ''
     };
     onChange({ ...data, education: [...data.education, newEdu] });
   };
@@ -500,14 +499,6 @@ export function CVForm({ data, onChange }: CVFormProps) {
                     placeholder="Grado, Máster, etc."
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Campo de estudio</Label>
-                  <Input
-                    value={edu.field}
-                    onChange={(e) => updateEducation(edu.id, 'field', e.target.value)}
-                    placeholder="Ingeniería Informática"
-                  />
-                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -529,23 +520,23 @@ export function CVForm({ data, onChange }: CVFormProps) {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Descripción</Label>
+                  <Label>Descripción del campo de estudio</Label>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="gap-1 text-xs h-7"
-                    disabled={!(edu.description || '').trim() || mejorando !== null}
+                    disabled={!(edu.field || '').trim() || mejorando !== null}
                     onClick={() =>
                       handleMejorarConIA(
-                        `edu-${edu.id}`,
-                        edu.description || '',
+                        `edu-field-${edu.id}`,
+                        edu.field || '',
                         'educacion',
-                        (t) => updateEducation(edu.id, 'description', t),
-                        `${edu.degree} en ${edu.field}`
+                        (t) => updateEducation(edu.id, 'field', t),
+                        `${edu.degree} en ${edu.institution}`
                       )
                     }
                   >
-                    {mejorando === `edu-${edu.id}` ? (
+                    {mejorando === `edu-field-${edu.id}` ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
                       <Sparkles className="h-3 w-3" />
@@ -554,9 +545,9 @@ export function CVForm({ data, onChange }: CVFormProps) {
                   </Button>
                 </div>
                 <Textarea
-                  value={edu.description || ''}
-                  onChange={(e) => updateEducation(edu.id, 'description', e.target.value)}
-                  placeholder="Describe tu formación, logros académicos..."
+                  value={edu.field || ''}
+                  onChange={(e) => updateEducation(edu.id, 'field', e.target.value)}
+                  placeholder="Describe tu campo de estudio, especialización, logros académicos..."
                   rows={3}
                 />
               </div>

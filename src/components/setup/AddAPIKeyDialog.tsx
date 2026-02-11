@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { APIKeyFormData, ProveedorIA } from '@/types/apiKeys';
 import { MODELOS_DISPONIBLES } from '@/types/apiKeys';
 import { useToast } from '@/hooks/use-toast';
+import { validarAPIKey } from '@/services/aiService';
 
 interface AddAPIKeyDialogProps {
   open: boolean;
@@ -32,14 +33,52 @@ interface AddAPIKeyDialogProps {
 
 export function AddAPIKeyDialog({ open, onOpenChange, onAdd, isAdmin }: AddAPIKeyDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{
+    status: 'idle' | 'success' | 'error';
+    message?: string;
+  }>({ status: 'idle' });
   const [formData, setFormData] = useState<APIKeyFormData>({
     nombre: '',
     proveedor: 'openai',
     clave: '',
-    modelo: 'gpt-5-mini',
+    modelo: 'gpt-5.2',
     tipo: 'personal',
   });
   const { toast } = useToast();
+
+  const handleValidate = async () => {
+    if (!formData.clave.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Debes proporcionar la API key primero.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setValidating(true);
+    setValidationResult({ status: 'idle' });
+
+    const resultado = await validarAPIKey(formData.proveedor, formData.clave, formData.modelo);
+
+    setValidating(false);
+
+    if (resultado.valida) {
+      setValidationResult({ status: 'success', message: '¡API key válida!' });
+      toast({
+        title: 'Validación exitosa',
+        description: 'La API key es válida y funciona correctamente.',
+      });
+    } else {
+      setValidationResult({ status: 'error', message: resultado.error || 'Error desconocido' });
+      toast({
+        title: 'Validación fallida',
+        description: resultado.error || 'No se pudo validar la API key.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,9 +115,10 @@ export function AddAPIKeyDialog({ open, onOpenChange, onAdd, isAdmin }: AddAPIKe
         nombre: '',
         proveedor: 'openai',
         clave: '',
-        modelo: 'gpt-5-mini',
+        modelo: 'gpt-5.2',
         tipo: 'personal',
       });
+      setValidationResult({ status: 'idle' });
       onOpenChange(false);
     } else {
       toast({
@@ -96,6 +136,7 @@ export function AddAPIKeyDialog({ open, onOpenChange, onAdd, isAdmin }: AddAPIKe
       proveedor,
       modelo: modelosDisponibles[0]?.value || '',
     });
+    setValidationResult({ status: 'idle' });
   };
 
   return (
@@ -198,14 +239,47 @@ export function AddAPIKeyDialog({ open, onOpenChange, onAdd, isAdmin }: AddAPIKe
             {/* API Key */}
             <div className="space-y-2">
               <Label htmlFor="clave">API Key</Label>
-              <Input
-                id="clave"
-                type="password"
-                placeholder="sk-... o AIza..."
-                value={formData.clave}
-                onChange={(e) => setFormData({ ...formData, clave: e.target.value })}
-                disabled={loading}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="clave"
+                  type="password"
+                  placeholder="sk-... o AIza..."
+                  value={formData.clave}
+                  onChange={(e) => {
+                    setFormData({ ...formData, clave: e.target.value });
+                    setValidationResult({ status: 'idle' });
+                  }}
+                  disabled={loading || validating}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleValidate}
+                  disabled={loading || validating || !formData.clave.trim()}
+                >
+                  {validating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Probar'
+                  )}
+                </Button>
+              </div>
+              
+              {validationResult.status === 'success' && (
+                <div className="flex items-center gap-2 text-sm text-green-600">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>{validationResult.message}</span>
+                </div>
+              )}
+              
+              {validationResult.status === 'error' && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <XCircle className="h-4 w-4" />
+                  <span>{validationResult.message}</span>
+                </div>
+              )}
+              
               <p className="text-xs text-muted-foreground">
                 Tu API key nunca se comparte y se almacena de forma segura
               </p>

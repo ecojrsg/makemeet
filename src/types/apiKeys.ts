@@ -11,9 +11,14 @@ export interface ModeloIA {
 
 export const MODELOS_DISPONIBLES: Record<ProveedorIA, ModeloIA[]> = {
   openai: [
-    { value: 'gpt-5', label: 'GPT-5' },
+    { value: 'gpt-5.2', label: 'GPT-5.2 (Recomendado)' },
     { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
-    { value: 'gpt-4-nano', label: 'GPT-4 Nano' },
+    { value: 'gpt-5-nano', label: 'GPT-5 Nano' },
+    { value: 'gpt-4.1', label: 'GPT-4.1' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { value: 'gpt-4.1-nano', label: 'GPT-4.1 Nano' },
+    { value: 'gpt-4o', label: 'GPT-4o' },
+    { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Económico)' },
   ],
   gemini: [
     { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' },
