@@ -637,6 +637,27 @@ const Index = () => {
           etiquetasIniciales={cvActualEtiquetas}
           modoEdicion={!!cvActualId}
         />
+        {/* Créditos */}
+        <div className="fixed bottom-3 right-3 z-40 text-[11px] text-muted-foreground/60 flex items-center gap-1">
+          <span>Hecho por</span>
+          <a
+            href="https://ecojrsg.dev"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            Eco
+          </a>
+          <span>·</span>
+          <a
+            href="https://katzekingdom.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-foreground transition-colors underline underline-offset-2"
+          >
+            Katze
+          </a>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

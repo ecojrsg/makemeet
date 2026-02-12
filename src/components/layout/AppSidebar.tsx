@@ -18,8 +18,9 @@ import { CVGuardado } from '@/hooks/useCVs';
 import { TipoPlantilla } from '@/types/templates';
 import { CVList } from '@/components/cv/CVList';
 import { SelectorPlantilla } from '@/components/cv/SelectorPlantilla';
-import { FolderOpen, Plus, Palette, Settings } from 'lucide-react';
+import { FolderOpen, Plus, Palette, Settings, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface AppSidebarProps {
   usuario: boolean;
@@ -102,6 +103,18 @@ export function AppSidebar({
                 <Settings aria-hidden="true" />
                 <span>Setup</span>
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Obtener Pro"
+              onClick={() => {
+                window.open('https://www.youtube.com/watch?v=xvFZjo5PgG0', '_blank');
+                toast('Nosotros no cobramos por esta aplicación... aún!', { duration: Infinity, closeButton: true });
+              }}
+            >
+              <CreditCard aria-hidden="true" />
+              <span>Obtener Pro</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
