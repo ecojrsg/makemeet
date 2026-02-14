@@ -30,7 +30,7 @@ export function PlainTextCVPreview({ data, githubProfile, githubRepos }: PlainTe
   const { personalInfo, experiences, education, skills, languages } = data;
 
   return (
-    <div className="bg-card text-card-foreground p-8 font-mono text-sm leading-relaxed whitespace-pre-wrap w-full max-w-none" id="plain-cv">
+    <div className="bg-card text-card-foreground p-8 font-mono text-sm leading-relaxed whitespace-pre-wrap w-full max-w-none">
       {/* Header */}
       <div className="mb-6">
         <div className="text-lg font-bold">{personalInfo.fullName || 'NOMBRE COMPLETO'}</div>

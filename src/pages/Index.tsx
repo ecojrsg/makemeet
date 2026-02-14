@@ -161,6 +161,8 @@ const Index = () => {
 
         const clone = element.cloneNode(true) as HTMLElement;
         clone.removeAttribute('id');
+        clone.style.maxHeight = 'none';
+        clone.style.overflow = 'visible';
         const container = document.createElement('div');
         container.style.position = 'fixed';
         container.style.left = '-9999px';
@@ -174,27 +176,15 @@ const Index = () => {
         const canvas = await html2canvas(clone, {
           scale: 2, useCORS: true, logging: false, allowTaint: true,
           scrollX: 0, scrollY: 0, windowWidth: element.scrollWidth,
+          height: clone.scrollHeight,
         });
         document.body.removeChild(container);
 
+        const pageWidth = 210;
+        const imgHeight = (canvas.height * pageWidth) / canvas.width;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [pageWidth, imgHeight] });
         const imgData = canvas.toDataURL('image/jpeg', 1);
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 10;
-        const contentWidth = pageWidth - margin * 2;
-        const contentImgHeight = (canvas.height * contentWidth) / canvas.width;
-        let heightLeft = contentImgHeight;
-        let position = margin;
-
-        pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
-        heightLeft -= (pageHeight - margin);
-        while (heightLeft > 0) {
-          pdf.addPage();
-          position = margin - (contentImgHeight - heightLeft);
-          pdf.addImage(imgData, 'JPEG', margin, position, contentWidth, contentImgHeight);
-          heightLeft -= pageHeight;
-        }
+        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, imgHeight);
         pdf.save('cv-texto-plano.pdf');
       } else {
         const { canvas } = await captureStyledCV();

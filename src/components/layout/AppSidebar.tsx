@@ -18,7 +18,7 @@ import { CVGuardado } from '@/hooks/useCVs';
 import { TipoPlantilla } from '@/types/templates';
 import { CVList } from '@/components/cv/CVList';
 import { SelectorPlantilla } from '@/components/cv/SelectorPlantilla';
-import { FolderOpen, Plus, Palette, Settings, CreditCard } from 'lucide-react';
+import { FolderOpen, Plus, Palette, Settings, CreditCard, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -103,6 +103,14 @@ export function AppSidebar({
                 <Settings aria-hidden="true" />
                 <span>Setup</span>
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Estado de la plataforma">
+              <a href="https://uptime.ecojrsg.dev/status/makemeet" target="_blank" rel="noopener noreferrer">
+                <Activity aria-hidden="true" />
+                <span>Estado de la plataforma</span>
+              </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
