@@ -7,9 +7,9 @@ const githubUrl = `https://github.com/${repository}`;
 
 const config: Config = {
   title: 'MakeMeEt Docs',
-  tagline: 'Guías de implementación y manual de usuario',
+  tagline: 'Guí­as de implementación y manual de usuario',
   url: process.env.DOCS_SITE_URL ?? `https://${organizationName}.github.io`,
-  baseUrl: '/docs/',
+  baseUrl: '/makemeet/',
   organizationName,
   projectName,
   trailingSlash: false,

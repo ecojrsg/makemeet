@@ -1,17 +1,17 @@
 # MakeMeEt
 
-Generador de currículums profesionales con React + Supabase + IA.
+Generador de currÃ­culums profesionales con React + Supabase + IA.
 
-## Documentación oficial
+## DocumentaciÃ³n oficial
 
-La documentación detallada del proyecto vive en `docs/` (Docusaurus):
+La documentaciÃ³n detallada del proyecto vive en `docs/` (Docusaurus):
 
-- Implementación técnica: `docs/docs-implementacion/`
+- ImplementaciÃ³n tÃ©cnica: `docs/docs-implementacion/`
 - Manual de usuario: `docs/docs-manual/`
 
-Cuando se publica en GitHub Pages, se sirve en la ruta `/docs/`.
+Cuando se publica en GitHub Pages, se sirve en la ruta `/makemeet/`.
 
-## Inicio rápido
+## Inicio rÃ¡pido
 
 ```bash
 git clone <URL_DEL_REPO>
@@ -52,7 +52,7 @@ npm run test
 npm run build
 ```
 
-## Scripts de documentación
+## Scripts de documentaciÃ³n
 
 ```bash
 npm run docs:install
