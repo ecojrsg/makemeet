@@ -29,6 +29,7 @@ dist-ssr
 # Agentes
 CLAUDE.md
 AGENT.md
+AGENTS.md
 GEMINI.md
 ANTIGRAVITY.md
 .cursor
