@@ -18,7 +18,7 @@ import { CVGuardado } from '@/hooks/useCVs';
 import { TipoPlantilla } from '@/types/templates';
 import { CVList } from '@/components/cv/CVList';
 import { SelectorPlantilla } from '@/components/cv/SelectorPlantilla';
-import { FolderOpen, Plus, Palette, Settings, CreditCard, Activity } from 'lucide-react';
+import { FolderOpen, Plus, Palette, Settings, CreditCard, Activity, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -103,6 +103,14 @@ export function AppSidebar({
                 <Settings aria-hidden="true" />
                 <span>Setup</span>
               </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Documentación">
+              <a href="https://ecojrsg.github.io/makemeet/" target="_blank" rel="noopener noreferrer">
+                <BookOpen aria-hidden="true" />
+                <span>Documentación</span>
+              </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

@@ -7,7 +7,7 @@ const githubUrl = `https://github.com/${repository}`;
 
 const config: Config = {
   title: 'MakeMeEt Docs',
-  tagline: 'Guí­as de implementación y manual de usuario',
+  tagline: 'Documentacion tecnica y manual operativo de MakeMeEt',
   url: process.env.DOCS_SITE_URL ?? `https://${organizationName}.github.io`,
   baseUrl: '/makemeet/',
   organizationName,
@@ -63,7 +63,7 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'implementacionSidebar',
           docsPluginId: 'implementacion',
-          label: 'Implementación',
+          label: 'Implementacion',
           position: 'left',
         },
         {
@@ -84,10 +84,10 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Documentación',
+          title: 'Documentacion',
           items: [
             {
-              label: 'Implementación',
+              label: 'Implementacion',
               to: '/implementacion/intro',
             },
             {
@@ -97,7 +97,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} MakeMeEt.`,
+      copyright: `Copyright (c) ${new Date().getFullYear()} MakeMeEt.`,
     },
   } satisfies Preset.ThemeConfig,
 };
