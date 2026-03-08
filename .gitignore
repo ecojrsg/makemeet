@@ -27,7 +27,6 @@ dist-ssr
 .env
 
 # Agentes
-docs/*
 CLAUDE.md
 AGENT.md
 GEMINI.md
@@ -43,3 +42,8 @@ ANTIGRAVITY.md
 supabase/.branches/
 supabase/.temp/
 
+# Docusaurus
+docs/node_modules/
+docs/build/
+docs/.docusaurus/
+docs/.cache/
