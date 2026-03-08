@@ -7,61 +7,56 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   public: {
     Tables: {
       ai_request_logs: {
         Row: {
-          id: string
-          user_id: string
           api_key_id: string | null
           api_key_nombre: string
-          proveedor: string
-          modelo: string
           contexto: string
+          created_at: string
+          error_mensaje: string | null
+          id: string
           info_adicional: string | null
+          intentos: number | null
+          modelo: string
           prompt: string
+          proveedor: string
           respuesta: string
           tiempo_respuesta_ms: number | null
-          intentos: number
-          error_mensaje: string | null
-          created_at: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
           api_key_id?: string | null
           api_key_nombre: string
-          proveedor: string
-          modelo: string
           contexto: string
+          created_at?: string
+          error_mensaje?: string | null
+          id?: string
           info_adicional?: string | null
+          intentos?: number | null
+          modelo: string
           prompt: string
+          proveedor: string
           respuesta: string
           tiempo_respuesta_ms?: number | null
-          intentos?: number
-          error_mensaje?: string | null
-          created_at?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
           api_key_id?: string | null
           api_key_nombre?: string
-          proveedor?: string
-          modelo?: string
           contexto?: string
+          created_at?: string
+          error_mensaje?: string | null
+          id?: string
           info_adicional?: string | null
+          intentos?: number | null
+          modelo?: string
           prompt?: string
+          proveedor?: string
           respuesta?: string
           tiempo_respuesta_ms?: number | null
-          intentos?: number
-          error_mensaje?: string | null
-          created_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -71,77 +66,41 @@ export type Database = {
             referencedRelation: "api_keys"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "ai_request_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
         ]
       }
       api_keys: {
         Row: {
+          activa: boolean
+          clave: string
+          created_at: string
           id: string
-          user_id: string
+          modelo: string
           nombre: string
           proveedor: string
-          clave: string
-          modelo: string
-          activa: boolean
-          created_at: string
           updated_at: string
+          user_id: string
         }
         Insert: {
+          activa?: boolean
+          clave: string
+          created_at?: string
           id?: string
-          user_id: string
+          modelo: string
           nombre: string
           proveedor: string
-          clave: string
-          modelo: string
-          activa?: boolean
-          created_at?: string
           updated_at?: string
+          user_id: string
         }
         Update: {
+          activa?: boolean
+          clave?: string
+          created_at?: string
           id?: string
-          user_id?: string
+          modelo?: string
           nombre?: string
           proveedor?: string
-          clave?: string
-          modelo?: string
-          activa?: boolean
-          created_at?: string
           updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "api_keys_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      configuracion: {
-        Row: {
-          id: string
-          clave: string
-          valor: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          clave: string
-          valor: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          clave?: string
-          valor?: string
-          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -207,7 +166,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      es_propietario_cv: { Args: { _cv_id: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
@@ -340,3 +299,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
