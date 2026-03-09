@@ -7,6 +7,7 @@ const sidebars: SidebarsConfig = {
     'instalacion-self-hosted',
     'desarrollo-local',
     'arquitectura-proyecto',
+    'crear-plantillas-cv',
     'snippets-clave',
     'api-keys-ia',
   ],
